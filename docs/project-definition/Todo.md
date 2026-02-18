@@ -1,123 +1,132 @@
-Based on the **Product Design Document** and **Technical Design Document**, here is the comprehensive To-Do list for building ORION AI.
+Based on the **Product Design Document**, **Technical Design Document**, and adhering to the **Test Driven Development (TDD)** methodology, here is the adjusted To-Do list.
 
-### Phase 1: Foundation & Infrastructure Setup
+This plan follows the **Red (Write Test) -> Green (Implement) -> Refactor** cycle. Every significant piece of logic must have a failing test before implementation begins.
 
-**Goal:** Prepare Google Cloud resources and configure the monorepo for AI integration.
+### Phase 1: Foundation & Infrastructure (The Environment Tests)
+
+**Goal:** Verify the "stage" is set correctly before writing code.
 
 - [ ] **GCP Project Configuration**
-- Enable required APIs: `aiplatform.googleapis.com`, `firestore.googleapis.com`.
+- **Task:** Enable APIs (`aiplatform`, `firestore`) and create Vector Index/Endpoint.
+- **Verification (Manual Test):** Run `gcloud ai index-endpoints list --region=<REGION>` and ensure your endpoint appears with status `READY`.
 
-- Create **Vertex AI Vector Search Index**:
-- Dimensions: `3072` (to match `gemini-embedding-001`).
+- [ ] **IAM Security Setup**
+- **Task:** Grant permissions to Cloud Build and Runtime Service Accounts .
 
-- Update Method: `StreamUpdate` (for live ingestion).
-
-- Deploy Index to a public Endpoint (to allow access from Cloud Functions).
-
-- Create **Firestore Database** (Native mode) if not already present.
-
-- [ ] **IAM & Security Configuration**
-- Grant **Cloud Build Service Account** permissions:
-- `roles/run.admin`, `roles/artifactregistry.repoAdmin`, `roles/logging.logWriter` .
-
-- `roles/iam.serviceAccountUser` on the runtime service account.
-
-- Grant **Runtime Service Account** (App Engine default or custom) permissions:
-- `roles/aiplatform.user` (Vertex AI User).
-
-- `roles/datastore.user` (Firestore access).
-
-- `roles/storage.objectViewer` (for GCS ingestion).
+- **Verification (Manual Test):** Use `gcloud projects get-iam-policy` to grep for `roles/aiplatform.user` on your specific service account email.
 
 - [ ] **Monorepo Configuration**
-- Add secrets to GitHub/`.env`: `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION`, `VECTOR_INDEX_ID`, `VECTOR_ENDPOINT_ID` .
-
-- Install backend dependencies in `apps/functions`:
-- `npm install @google/genai google-auth-library`.
+- **Task:** Add secrets (`GOOGLE_CLOUD_PROJECT`, `VECTOR_INDEX_ID`) to `.env` and GitHub Secrets.
+- **Task:** Install backend dependencies (`@google/genai`).
+- **Verification:** Run `pnpm dev` in `apps/functions` to ensure no startup crashes due to missing packages.
 
 ---
 
-### Phase 2: Shared Domain Layer
+### Phase 2: Shared Domain Layer (TDD)
 
-**Goal:** Establish a common language for Chat and Ingestion data types.
+**Goal:** Define and validate the data contract.
 
-- [ ] **Create Shared Schemas**
-- Create file: `packages/shared/src/schemas/rag.ts`.
-- Implement `ChatQuerySchema`: `{ question, history }`.
-- Implement `ChatResponseSchema`: `{ answer, citations }`.
-- Implement `IngestDocSchema`: `{ sourceUri, sourceType, title }`.
-- Export these schemas in `packages/shared/src/index.ts`.
+- [ ] **Chat & Ingestion Schemas**
+- **🔴 Write Test:** Create `packages/shared/src/schemas/rag.test.ts`.
+- Assert `ChatQuerySchema` rejects empty questions or strings > 1000 chars.
+- Assert `IngestDocSchema` rejects invalid URLs.
+
+- **🟢 Implement:** Create `packages/shared/src/schemas/rag.ts` and export Zod schemas to satisfy the tests.
+- **Refactor:** Export from `packages/shared/src/index.ts` and verify imports work.
 
 ---
 
 ### Phase 3: Backend Implementation (`apps/functions`)
 
-**Goal:** Implement the "Brain" (AI logic) and "Spine" (API layer).
+**Goal:** Build the brain using unit tests for logic and mocks for external services.
 
-- [ ] **Vertex AI Adapter (`src/lib/vertex.ts`)**
-- Implement `getAuthClient()` using `google-auth-library` for server-side ADC .
+- [ ] **Ingestion Logic (Chunking)**
+- **🔴 Write Test:** Create `apps/functions/src/lib/ingest.test.ts`.
+- Test `chunkText()`: Provide a 5000-char string and assert it returns array of strings < 1200 chars each.
+- Test boundary conditions (empty string, exact 1200 chars).
 
-- Implement `embedTexts(texts)` using `@google/genai` with `gemini-embedding-001` .
+- **🟢 Implement:** Write `chunkText` function in `apps/functions/src/lib/ingest.ts` using the double-newline split logic .
 
-- Implement `queryVectorSearch(vector)` using the REST API (`indexEndpoints.findNeighbors`) to minimize latency .
+- [ ] **Vertex AI Adapter (Mocked)**
+- **🔴 Write Test:** Create `apps/functions/src/lib/vertex.test.ts`.
+- Mock `@google/genai` and `google-auth-library`.
+- Test `embedTexts`: Assert it calls the SDK with `gemini-embedding-001` and returns vectors.
+- Test `queryVectorSearch`: Assert it constructs the correct REST URL and payload.
 
-- Implement `upsertDatapoints(datapoints)` for the ingestion pipeline .
+- **🟢 Implement:** Write `embedTexts`, `queryVectorSearch`, and `upsertDatapoints` in `apps/functions/src/lib/vertex.ts`.
 
-- [ ] **Ingestion Logic (`src/lib/ingest.ts`)**
-- Implement `chunkText(text)`: Split by double newlines/headings, capped at ~1200 characters.
+- [ ] **Ingestion Workflow (Integration Test)**
+- **🔴 Write Test:** Add `ingestDocument` test to `ingest.test.ts`.
+- Mock the `vertex` adapter and `firestore`.
+- Assert that for 1 input doc:
 
-- Implement `ingestDocument` flow:
+1. Firestore `doc` is created.
+2. Firestore `chunks` are created.
+3. `vertex.upsertDatapoints` is called exactly once with correct IDs.
 
-1. Fetch content from URL/GCS.
-2. Generate chunks.
-3. Batch generate embeddings.
-4. Transactionally save to Firestore (`docs` + `chunks` collections) .
+- **🟢 Implement:** Write `ingestDocument` orchestration logic in `ingest.ts`.
 
-5. Upsert vectors to Vertex AI.
+- [ ] **tRPC Router**
+- **🔴 Write Test:** Create `apps/functions/src/trpc/routers/rag.test.ts`.
+- Test `chat` procedure: Mock embedding/search/generation response. Call caller.rag.chat() and assert response matches `ChatResponseSchema`.
+- Test `ingest` procedure: Assert it throws `UNAUTHORIZED` if user is not admin (mock context).
 
-- [ ] **tRPC Router (`src/trpc/routers/rag.ts`)**
-- Create `ragRouter`.
-- Implement `ingest` mutation (protected by admin check).
-- Implement `chat` mutation:
-
-1. Embed input question.
-2. Search vectors.
-3. Hydrate context from Firestore.
-
-4. Construct "Grounded Generation" prompt .
-
-5. Call Gemini `generateContent`.
-
-- Add `ragRouter` to the main `appRouter`.
+- **🟢 Implement:** Create `ragRouter` in `apps/functions/src/trpc/routers/rag.ts` and add logic.
+- **Refactor:** Add `ragRouter` to `appRouter` in `router.ts`.
 
 ---
 
 ### Phase 4: Frontend Implementation (`apps/web`)
 
-**Goal:** Build the user interface for research and administration.
+**Goal:** Build UI components that are verified to interact with the API correctly.
 
-- [ ] **Admin Ingestion Interface**
-- Create page `src/pages/Admin.tsx` (or similar).
-- Add a form using `IngestDocSchema` to accept Source URIs.
-- Connect to `trpc.rag.ingest.useMutation`.
+- [ ] **Chat Component Logic**
+- **🔴 Write Test:** Create `apps/web/src/components/RAGChat.test.tsx`.
+- Mock `trpc.rag.chat.useMutation`.
+- Test: User types in input -> Click "Send" -> Mutation is fired with correct text.
+- Test: Loading state disables the input/button.
+- Test: Error state displays an error message.
 
-- [ ] **Chat Component (`src/components/RAGChat.tsx`)**
-- Scaffold UI using `@repo/ui` components (`Card`, `Button`, `Input`).
-- Manage state for `messages` and `isLoading`.
-- Connect to `trpc.rag.chat.useMutation`.
-- Render Markdown responses and display citations (footnotes) from the response data.
+- **🟢 Implement:** Create `RAGChat.tsx` using `@repo/ui` components (`Card`, `Button`, `Input`).
+
+- [ ] **Chat Response Rendering**
+- **🔴 Write Test:** Add to `RAGChat.test.tsx`.
+- Mock a response with markdown text and 2 citations.
+- Test: Assert markdown is rendered (e.g., look for specific HTML tags or classes).
+- Test: Assert citations appear as footnotes/links.
+
+- **🟢 Implement:** Update `RAGChat.tsx` to include `react-markdown` and citation rendering logic.
+
+- [ ] **Admin Ingestion Page**
+- **🔴 Write Test:** Create `apps/web/src/pages/Admin.test.tsx`.
+- Test: Form validation (invalid URL shows error).
+- Test: Submit calls `trpc.rag.ingest.useMutation`.
+- Test: Success toast appears on resolution.
+
+- **🟢 Implement:** Create `Admin.tsx` page.
 
 ---
 
 ### Phase 5: Verification & Launch
 
-**Goal:** Ensure reliability and deploy.
+**Goal:** Confirm everything works together in the real world.
 
-- [ ] **Local Testing**
-- Run `pnpm test` to verify schema validation and chunking logic.
-- Use `pnpm dev` to run the frontend and test the full flow with the local emulator (if configured) or dev environment.
+- [ ] **Local Integration Run**
+- **Task:** Run `pnpm dev`.
+- **Verification:**
 
-- [ ] **Deployment**
-- Push code to `dev` branch to trigger `deploy-dev.yml`.
-- Verify Cloud Functions deployment logs for IAM errors.
-- Perform a live test: Ingest a NASA/ESA document and ask a specific question to verify grounding.
+1. Navigate to Admin page.
+2. Ingest a small test URL (e.g., a NASA press release).
+3. Check Firestore Emulator/Console: Do documents exist?
+4. Go to Chat. Ask a question about that document.
+5. **Success Criteria:** Answer is generated and correct citation ID is shown.
+
+- [ ] **Deployment Pipeline Check**
+- **Task:** Push to `dev` branch.
+- **Verification:** Watch GitHub Actions `deploy-dev.yml` logs.
+- **Success Criteria:** All steps (Build, Test, Authenticate, Deploy) pass green.
+
+- [ ] **Smoke Test (Production/Stage)**
+- **Task:** Ingest a real scientific paper PDF (via GCS trigger or URL).
+- **Verification:** Ask "What is the primary conclusion of [Paper Title]?"
+- **Success Criteria:** ORION AI answers accurately based _only_ on the new source.
