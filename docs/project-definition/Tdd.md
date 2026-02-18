@@ -2,94 +2,237 @@
 
 ## 1. Introduction
 
-This document details the **Level 5 (Exceptional)** technical implementation of ORION AI. It prioritizes **Hexagonal Architecture**, **Advanced CI/CD**, and **Observability** to ensure a robust, maintainable, and scalable system.
+This document outlines the technical implementation for **ORION AI**, a Retrieval-Augmented Generation (RAG) system integrated into the existing Hytel monorepo stack. It translates the functional requirements from the Product Design Document into concrete engineering tasks, leveraging the existing architecture of React, tRPC, and Firebase Cloud Functions.
 
 ## 2. System Architecture
 
-We will adopt a **Hexagonal Architecture (Ports and Adapters)** pattern to decouple the core domain logic from external infrastructure (Vertex AI, Firestore).
+ORION AI will be implemented as a new feature module within the existing monorepo structure.
 
-### 2.1 Layers
+### 2.1 Component Mapping
 
-1.  **Domain Layer (Core):**
-    * Pure TypeScript entities and logic.
-    * *No dependencies* on frameworks or external SDKs.
-    * Contains: `ChunkingService`, `RAGOrchestrator`.
+| Component         | Technology     | Location in Monorepo                     | Description                                          |
+| ----------------- | -------------- | ---------------------------------------- | ---------------------------------------------------- |
+| **Shared Domain** | Zod            | `packages/shared/src/schemas/rag.ts`     | Shared validation schemas for Chat & Ingestion.      |
+| **Frontend UI**   | React + Shadcn | `apps/web/src/components/RAGChat.tsx`    | Chat interface using existing UI package components. |
+| **API Layer**     | tRPC           | `apps/functions/src/trpc/routers/rag.ts` | Type-safe endpoints for `chat` and `ingest`.         |
+| **Backend Logic** | Node.js        | `apps/functions/src/lib/vertex.ts`       | Adapter for Vertex AI SDK interaction.               |
+| **Vector Store**  | Vector Search  | Google Cloud Platform                    | External managed service (3072 dim index) .          |
 
-2.  **Application Layer (Ports):**
-    * Defines interfaces (Ports) that the core needs.
-    * Example: `IVectorStore`, `IDocumentRepository`, `ILLMProvider`.
+|
+| **Doc Store** | Firestore | Google Cloud Platform | External managed service (Native mode) .
 
-3.  **Infrastructure Layer (Adapters):**
-    * Concrete implementations of Ports.
-    * Example: `VertexAIAdapter` (implements `IVectorStore`), `FirestoreAdapter` (implements `IDocumentRepository`).
-    * Dependency Injection (DI) is used to wire these at runtime.
-
-### 2.2 Architectural Decision Records (ADRs)
-* **ADR-001:** Adoption of Hexagonal Architecture for testability.
-* **ADR-002:** Use of `gemini-embedding-001` with `task_type` optimization.
-* **ADR-003:** StreamUpdate strategy for Vector Search to minimize ingestion latency.
+|
 
 ---
 
-## 3. Infrastructure & Operations (Ops)
+## 3. Data Architecture
 
-### 3.1 Infrastructure as Code (IaC)
-* **Recreation Strategy:** A master script (`scripts/recreate-infra.ts`) utilizing the Google Cloud SDK will allow for full environment teardown and recreation in <15 minutes.
-* **Autoscaling:** Cloud Functions configured with:
-    * `minInstances`: 1 (to prevent cold starts in prod).
-    * `concurrency`: 80.
-    * `memory`: 1GiB.
+### 3.1 Firestore Schema
 
-### 3.2 Observability & Alerts
-* **Custom Metrics:**
-    * `rag_retrieval_latency`: Histogram of time spent in Vector Search.
-    * `rag_token_usage`: Counter for input/output tokens.
-* **Alerting:** PagerDuty/Email alerts triggered if `5xx` error rate > 1% over 5 minutes.
-* **Dashboards:** A Grafana/GCP Monitoring dashboard visualizing these metrics.
+We will use strict typing in the application layer to enforce this schema.
 
----
+- **`docs` Collection**
+- `id`: `string` (UUID)
+- `sourceType`: `'gcs' | 'api'`
+- `sourceUri`: `string`
+- `title`: `string`
+- `createdAt`: `Timestamp`
 
-## 4. CI/CD & Developer Experience
+- **`docs/{docId}/chunks` Sub-collection**
+- `id`: `string` (Sequential index, e.g., "0001")
+- `text`: `string` (Max ~1000 chars)
+- `vectorDatapointId`: `string` (Format: `${docId}_${chunkId}`).
 
-### 4.1 Turbo Pipeline
-* **Caching:** Intelligent caching of `build` and `test` artifacts. Re-running a passed test on unchanged code takes 0ms.
-* **Parallelization:** Linting, Type-Checking, and Unit Tests run in parallel jobs.
+### 3.2 Vector Search Index
 
-### 4.2 Quality Gates
-* **Mutation Testing:** `Stryker` runs on the Core Domain to verify test quality (killing mutants).
-* **Code Coverage:** Codecov enforcement of 95% on Domain logic, 90% on Adapters.
-* **Dependency Scanning:** Automated vulnerability checks in the pipeline.
-
-### 4.3 Deployment Strategy
-* **Blue-Green:** Use Cloud Run revisions/traffic splitting. New deployments take 0% traffic initially, then 10% (Canary), then 100%.
-* **Preview Deploys:** Every PR deploys a temporary instance of the frontend and backend for visual QA.
+- **Model**: `gemini-embedding-001`
+- **Dimensions**: 3072
+- **Update Method**: StreamUpdate (for lower latency ingestion).
 
 ---
 
-## 5. API Design & Data Model
+## 4. API Design (tRPC)
 
-### 5.1 tRPC (Typed API)
-* **Validation:** Strict Zod schemas for all inputs.
-* **Error Handling:** Custom `TRPCError` mapping for domain exceptions (e.g., `DomainError` -> `400 BAD REQUEST`, `InfraError` -> `500 INTERNAL SERVER ERROR`).
+We will extend the existing `appRouter` in `apps/functions`.
 
-### 5.2 Database (Firestore)
-* **Seeding:** `pnpm db:seed` script populates local emulator and dev environments with realistic dummy data for UI development.
-* **Indexes:** `firestore.indexes.json` managed in git to ensure consistent indexing across environments.
+### 4.1 Shared Schemas
+
+**Location**: `packages/shared/src/schemas/rag.ts`
+
+```typescript
+import { z } from 'zod'
+
+export const ChatQuerySchema = z.object({
+  question: z.string().min(1).max(1000),
+  history: z
+    .array(
+      z.object({
+        role: z.enum(['user', 'model']),
+        text: z.string(),
+      })
+    )
+    .optional(),
+})
+
+export const ChatResponseSchema = z.object({
+  answer: z.string(),
+  citations: z.array(
+    z.object({
+      docId: z.string(),
+      title: z.string(),
+      uri: z.string().optional(),
+    })
+  ),
+})
+
+export const IngestDocSchema = z.object({
+  sourceUri: z.string().url(),
+  sourceType: z.enum(['gcs', 'api']),
+  title: z.string().optional(),
+})
+```
+
+### 4.2 Router Implementation
+
+**Location**: `apps/functions/src/trpc/routers/rag.ts`
+
+```typescript
+import { router, publicProcedure } from '../trpc'
+import { ChatQuerySchema, ChatResponseSchema, IngestDocSchema } from '@repo/shared'
+// Import adapters...
+
+export const ragRouter = router({
+  chat: publicProcedure
+    .input(ChatQuerySchema)
+    .output(ChatResponseSchema)
+    .mutation(async ({ input, ctx }) => {
+      // 1. Generate Embedding
+      const queryVector = await embedText(input.question)
+
+      // 2. Vector Search
+      const neighbors = await searchVectors(queryVector)
+
+      // 3. Hydrate Context from Firestore
+      const context = await fetchChunks(neighbors.ids)
+
+      // 4. Generate Response
+      const response = await generateAnswer(input.question, context)
+
+      return response
+    }),
+
+  ingest: publicProcedure.input(IngestDocSchema).mutation(async ({ input, ctx }) => {
+    // Admin check logic here...
+    return await ingestDocument(input)
+  }),
+})
+```
 
 ---
 
-## 6. Implementation Plan
+## 5. Backend Implementation Details
 
-### Phase 1: Core & Ports (Pure TS)
-1.  Define `IVectorStore`, `IDocumentRepository`.
-2.  Implement `IngestionService` logic (chunking strategies) with **Property-Based Tests** (fast-check).
+### 5.1 Vertex AI Adapter
 
-### Phase 2: Adapters (Integration)
-1.  Implement `VertexAIAdapter` with `@google/genai`.
-2.  Implement `FirestoreAdapter`.
-3.  Add **Contract Tests** to ensure Adapters meet Port specifications.
+**Location**: `apps/functions/src/lib/vertex.ts`
 
-### Phase 3: Assembly & Interface
-1.  Wire up DI container in `apps/functions`.
-2.  Implement `RAGChat` UI with **A11y** audit tools (`jest-axe`) integrated.
-3.  Perform **Lighthouse** audit on the build.
+This module wraps the `@google/genai` SDK to handle authentication and model interaction.
+
+- **Dependencies**: Add `@google/genai` and `google-auth-library` to `apps/functions/package.json`.
+
+- **Authentication**: Use `GoogleAuth` to fetch an access token for the `Service Account` credential .
+
+- **Embedding**: Use `gemini-embedding-001`.
+- _Note_: Ensure `task_type` is set to `RETRIEVAL_DOCUMENT` for ingestion and `RETRIEVAL_QUERY` for chat to optimize vector quality.
+
+- **Vector Search**: Use the **REST API** (`indexEndpoints.findNeighbors`) instead of gRPC to minimize cold start times in Cloud Functions .
+
+### 5.2 Ingestion Logic
+
+**Location**: `apps/functions/src/lib/ingest.ts`
+
+1. **Fetch**: Retrieve raw content from `sourceUri`.
+2. **Chunk**: Split text by double newlines (`\n\n`), merging small paragraphs until `maxChars=1000` is reached .
+
+3. **Batch**: Process embeddings in batches (e.g., 5 chunks per API call) to avoid rate limits.
+4. **Transaction**:
+
+- Write `doc` metadata to Firestore.
+- Write `chunks` to Firestore.
+- _Only_ after Firestore success, upsert vectors to Vertex AI.
+
+---
+
+## 6. Frontend Implementation Details
+
+### 6.1 Chat Component
+
+**Location**: `apps/web/src/components/RAGChat.tsx`
+
+- **UI Framework**: Utilize `@repo/ui` components (`Card`, `Button`) for consistency.
+- **State Management**: Use `trpc.rag.chat.useMutation` hook for handling loading states and optimistic updates.
+- **Markdown Support**: Use `react-markdown` to render the AI's structured response.
+
+### 6.2 Admin Ingestion Page
+
+**Location**: `apps/web/src/pages/Admin.tsx` (Protected Route)
+
+- Simple form taking `sourceUri` and `title`.
+- Triggers `trpc.rag.ingest.useMutation`.
+- Displays a toast notification on success/failure.
+
+---
+
+## 7. Infrastructure & Security
+
+### 7.1 IAM Permissions
+
+Per the "Google Cloud 101" guide, we must ensure our Service Accounts are correctly provisioned to avoid deployment failures .
+
+- **Cloud Build SA**:
+- `roles/run.admin`
+- `roles/artifactregistry.repoAdmin`
+- `roles/iam.serviceAccountUser` (Critical for runtime identity).
+
+- **Runtime Service Account** (used by Cloud Functions):
+- `roles/aiplatform.user` (Access Vertex AI).
+
+- `roles/datastore.user` (Access Firestore).
+- `roles/storage.objectViewer` (Read raw docs).
+
+### 7.2 Deployment
+
+We use the existing `deploy-dev.yml` and `deploy-main.yml` workflows.
+
+- **Environment Variables**:
+  Update `.env` and GitHub Secrets with:
+- `GOOGLE_CLOUD_PROJECT`
+- `GOOGLE_CLOUD_LOCATION`
+- `VECTOR_INDEX_ID`
+- `VECTOR_ENDPOINT_ID`
+
+---
+
+## 8. Development Plan
+
+### Phase 1: Shared Domain & Configuration
+
+1. Create `packages/shared/src/schemas/rag.ts`.
+2. Export new schemas in `packages/shared/src/index.ts`.
+3. Add `@google/genai` dependency to `apps/functions`.
+
+### Phase 2: Backend Implementation
+
+1. Implement `vertex.ts` adapter (Auth + Embed + Search).
+2. Implement `ingest.ts` logic (Chunking + Firestore).
+3. Create `trpc/routers/rag.ts` and mount it to `appRouter`.
+
+### Phase 3: Frontend Implementation
+
+1. Create `RAGChat` component using `@repo/ui`.
+2. Integrate into `App.tsx` for testing.
+
+### Phase 4: Integration Testing
+
+1. Run `pnpm test` to verify unit tests for chunking logic and schemas.
+2. Deploy to `dev` branch using the CI/CD pipeline to verify IAM permissions and Vertex AI connectivity.
