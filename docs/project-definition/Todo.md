@@ -15,10 +15,10 @@ This plan follows the **Red (Write Test) -> Green (Implement) -> Refactor** cycl
 
 - **Verification (Manual Test):** Use `gcloud projects get-iam-policy` to grep for `roles/aiplatform.user` on your specific service account email.
 
-- [ ] **Monorepo Configuration**
-- **Task:** Add secrets (`GOOGLE_CLOUD_PROJECT`, `VECTOR_INDEX_ID`) to `.env` and GitHub Secrets.
-- **Task:** Install backend dependencies (`@google/genai`).
-- **Verification:** Run `pnpm dev` in `apps/functions` to ensure no startup crashes due to missing packages.
+- [x] **Monorepo Configuration**
+  - [x] **Task:** Add secrets (`GOOGLE_CLOUD_PROJECT`, `VECTOR_INDEX_ID`) to `.env` and GitHub Secrets.
+  - [x] **Task:** Install backend dependencies (`@google/genai`).
+  - [x] **Verification:** Run `pnpm dev` in `apps/functions` to ensure no startup crashes due to missing packages.
 
 ---
 
@@ -26,13 +26,10 @@ This plan follows the **Red (Write Test) -> Green (Implement) -> Refactor** cycl
 
 **Goal:** Define and validate the data contract.
 
-- [ ] **Chat & Ingestion Schemas**
-- **🔴 Write Test:** Create `packages/shared/src/schemas/rag.test.ts`.
-- Assert `ChatQuerySchema` rejects empty questions or strings > 1000 chars.
-- Assert `IngestDocSchema` rejects invalid URLs.
-
-- **🟢 Implement:** Create `packages/shared/src/schemas/rag.ts` and export Zod schemas to satisfy the tests.
-- **Refactor:** Export from `packages/shared/src/index.ts` and verify imports work.
+- [x] **Chat & Ingestion Schemas**
+  - [x] **🔴 Write Test:** Create `packages/shared/src/schemas/rag.test.ts`.
+  - [x] **🟢 Implement:** Create `packages/shared/src/schemas/rag.ts` and export Zod schemas to satisfy the tests.
+  - [x] **Refactor:** Export from `packages/shared/src/index.ts` and verify imports work.
 
 ---
 
