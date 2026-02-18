@@ -1,65 +1,86 @@
-# Todo: Serverless RAG
+# Todo: Utilizing Vertex AI (ORION AI RAG)
 
-### Phase 1: Foundation & Serverless Setup
+### Phase 1: Foundation & Project Setup
 
-**Goal:** Configure Firestore for vector search and prepare the monorepo.
+**Goal:** Prepare the environment and establish types.
 
-- [ ] **Firestore Configuration**
-  - [ ] Task: Enable Firestore Native Vector Search (if not active).
-  - [ ] Task: Create a composite index for kNN search on `chunks` sub-collection.
-- [x] **Monorepo Configuration**
-  - [x] Add secrets: `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION`.
-  - [x] Install `@google/genai` and `google-auth-library`.
-
----
-
-### Phase 2: Shared Domain & TDD Foundation
-
-**Goal:** Define types and write initial validation tests.
-
-- [x] **Schemas (TDD)**
+- [ ] **Google Cloud Configuration**
+  - [ ] Enable APIs: `aiplatform.googleapis.com`, `firestore.googleapis.com`.
+  - [ ] Configure Service Account with `aiplatform.user` and `datastore.user` roles.
+  - [ ] Configure Workload Identity Federation (WIF) for CI/CD access.
+- [ ] **Monorepo Setup**
+  - [x] Install `@google-cloud/vertexai` in `apps/functions`.
+  - [x] Add `GOOGLE_CLOUD_PROJECT` and `GOOGLE_CLOUD_LOCATION` to `.env`.
+  - [ ] Create `apps/functions/src/lib/gemini.ts` scaffolding.
+- [ ] **Type Definition (TDD)**
   - [x] 🔴 Write Test: `packages/shared/src/schemas/rag.test.ts`.
-  - [x] 🟢 Implement: `packages/shared/src/schemas/rag.ts` (Zod).
-- [ ] **Types & Interfaces**
-  - [ ] Task: Define shared response types for citations and similarity scores.
+  - [x] 🟢 Implement: `packages/shared/src/schemas/rag.ts` (Zod schemas).
 
 ---
 
-### Phase 3: Backend Implementation (TDD Lifecycle)
+### Phase 2: Ingestion Pipeline
 
-**Goal:** Implement serverless logic with full test coverage.
+**Goal:** Process and store documents as searchable vectors.
 
-- [ ] **Gemini Adapter (`src/lib/gemini.ts`)**
-  - [ ] 🔴 Write Test: Unit tests for embedding generation (mocking API).
-  - [ ] 🟢 Implement: `embedTexts` using `text-embedding-004`.
-- [ ] **Ingestion Logic (`src/lib/ingest.ts`)**
-  - [ ] 🔴 Write Test: Logic for chunking and batch embedding.
-  - [ ] 🟢 Implement: Ingestion flow (PDF -> Text -> Chunks -> Firestore).
-- [ ] **tRPC Chat Procedure**
-  - [ ] 🔴 Write Test: Procedure integration test (mocking Firestore kNN).
-  - [ ] 🟢 Implement: `chat` procedure mapping: `User Query -> kNN -> Prompt -> Gemini`.
-
----
-
-### Phase 4: Frontend Implementation (Motion & A11y)
-
-**Goal:** Build the UI with high polish and accessibility.
-
-- [ ] **Admin UI (Ingestion)**
-  - [ ] 🔴 Write Test: Admin page form validaton and mutation triggering.
-  - [ ] 🟢 Implement: `Admin.tsx` with upload status feedback.
-- [ ] **Chat Component (`RAGChat.tsx`)**
-  - [ ] 🔴 Write Test: A11y audit using `jest-axe` on the chat interface.
-  - [ ] 🟢 Implement: Chat UI with motion transitions and footnote citations.
+- [ ] **Document Loading**
+  - [ ] 🔴 Write Test: Mock GCS/URL fetch and verify raw text extraction.
+  - [ ] 🟢 Implement: `src/lib/ingest.ts` -> `fetchContent(url)`.
+- [ ] **Text Chunking**
+  - [ ] 🔴 Write Test: Verify chunking with overlapping windows (1000 chars, 200 overlap).
+  - [ ] 🟢 Implement: `src/lib/ingest.ts` -> `chunkText(text)`.
+- [ ] **Vertex AI Embeddings**
+  - [ ] 🔴 Write Test: Mock `text-embedding-004` response for multiple chunks.
+  - [ ] 🟢 Implement: `src/lib/gemini.ts` -> `embedTexts(chunks[])`.
+- [ ] **Firestore Storage**
+  - [ ] 🔴 Write Test: Verify batch write to `docs` and `docs/{id}/chunks` sub-collections.
+  - [ ] 🟢 Implement: `src/lib/ingest.ts` -> `saveToFirestore(doc, chunks)`.
 
 ---
 
-### Phase 5: Verification & Deployment
+### Phase 3: RAG Retrieval & Generation
 
-**Goal:** Final QA and serverless deployment.
+**Goal:** Conversational AI powered by context retrieval.
 
-- [ ] **E2E Testing**
-  - [ ] Task: Write Playwright scripts for "Ask a question about a NASA doc".
+- [ ] **Query Processing**
+  - [ ] 🔴 Write Test: Verify query embedding logic.
+  - [ ] 🟢 Implement: `src/lib/rag.ts` -> `getQueryEmbedding(userQuery)`.
+- [ ] **Semantic Retrieval**
+  - [ ] 🔴 Write Test: Verify `findNearest` (kNN) query returns top results.
+  - [ ] 🟢 Implement: `src/lib/rag.ts` -> `retrieveContext(vector)`.
+- [ ] **Grounding & Generation**
+  - [ ] 🔴 Write Test: Verify prompt template includes retrieved context and instructions.
+  - [ ] 🟢 Implement: `src/lib/gemini.ts` -> `generateGroundedResponse(query, context)`.
+- [ ] **tRPC Procedure**
+  - [ ] 🔴 Write Test: Integration test for `chat` mutation (Red-Green-Refactor).
+  - [ ] 🟢 Implement: `apps/functions/src/trpc/routers/rag.ts` -> `chat` procedure.
+
+---
+
+### Phase 4: Frontend Development
+
+**Goal:** A premium, responsive chat experience.
+
+- [ ] **Core Chat Component**
+  - [ ] 🔴 Write Test: Verify message list renders user/model roles correctly.
+  - [ ] 🟢 Implement: `apps/web/src/components/RAGChat.tsx` state management.
+- [ ] **markdown Rendering**
+  - [ ] Task: Integrate `react-markdown` with syntax highlighting for code blocks.
+- [ ] **Citation System**
+  - [ ] Task: Implement footnote UI for displaying source links.
+- [ ] **Admin Dash**
+  - [ ] Task: Create file upload form and ingestion status tracker.
+
+---
+
+### Phase 5: Verification & Launch
+
+**Goal:** Production readiness and quality assurance.
+
+- [ ] **Automated Testing**
+  - [ ] Task: Unit tests for all adapters (100% logic coverage).
+  - [ ] Task: Playwright E2E tests (Ingest -> Chat -> Verify Answer).
+- [ ] **Observability**
+  - [ ] Task: Add structured logging for retrieval similarity scores and LLM latency.
 - [ ] **Deployment**
-  - [ ] Task: Deploy Cloud Functions via GitHub Actions.
-  - [ ] Task: Verify $0 idle cost in GCP Billing console.
+  - [ ] Task: Deploy to production via GitHub Actions.
+  - [ ] Task: Final A11y and performance audit.

@@ -1,4 +1,4 @@
-# Technical Design Document: ORION AI (Serverless RAG)
+# Technical Design Document: ORION AI (Vertex AI RAG)
 
 ## 1. Test Driven Development (TDD) Strategy (Priority)
 
@@ -16,78 +16,76 @@ At ORION AI, quality is not an afterthought. We utilize a **Test-First** approac
 
 ---
 
-## 2. System Architecture
+## 2. System Architecture (Enterprise-Grade Core)
 
-We utilize a serverless architecture to minimize costs while maintaining high performance.
+The system utilizes **Vertex AI** as the core intelligence engine, with a decoupled infrastructure layer.
 
 ### 2.1 Component Mapping
 
-| Component         | Technology | Monorepo Location                        | Description                     |
-| :---------------- | :--------- | :--------------------------------------- | :------------------------------ |
-| **Shared Domain** | Zod        | `packages/shared/src/schemas/rag.ts`     | Validation and types for RAG.   |
-| **Frontend UI**   | React      | `apps/web/src/components/RAGChat.tsx`    | Interactive chat interface.     |
-| **API Layer**     | tRPC       | `apps/functions/src/trpc/routers/rag.ts` | Type-safe procedures.           |
-| **RAG Adapter**   | Node.js    | `apps/functions/src/lib/gemini.ts`       | Gemini & Firestore integration. |
-| **Vector DB**     | Firestore  | GCP                                      | Native kNN search (Serverless). |
+| Component         | Technology           | Monorepo Location                          | Description                   |
+| :---------------- | :------------------- | :----------------------------------------- | :---------------------------- |
+| **Shared Domain** | Zod                  | `packages/shared/src/schemas/rag.ts`       | Validation and types for RAG. |
+| **Frontend UI**   | React                | `apps/web/src/components/RAGChat.tsx`      | Interactive chat interface.   |
+| **API Layer**     | tRPC                 | `apps/functions/src/trpc/routers/rag.ts`   | Type-safe procedures.         |
+| **Model Adapter** | **Google Cloud SDK** | `apps/functions/src/lib/gemini.ts`         | Vertex AI Adapter.            |
+| **Vector Port**   | `IVectorStore`       | `apps/functions/src/ports/vector-store.ts` | Hexagonal Port interface.     |
 
 ---
 
-## 3. Data Architecture
+## 3. Data Architecture (Utilizing Vertex AI & Firestore)
 
-### 3.1 Firestore Schema
+### 3.1 Intelligence Layer (Vertex AI)
 
-- **Collection:** `docs`
-  - `id`: UUID string.
-  - `title`: Document title.
-  - `createdAt`: ISO Timestamp.
-- **Sub-collection:** `docs/{docId}/chunks`
-  - `text`: String content of the chunk.
-  - `embedding`: Vector (3072 dims) using Firestore's `VECTOR` type.
+- **Embeddings:** `text-embedding-004` (3072 dimensions).
+- **Generation:** `gemini-2.5-flash` for high-speed, cited responses.
 
-### 3.2 Vector Search
+### 3.2 Storage Layer
 
-- **Model:** `text-embedding-004`.
+We utilize Firestore's native vector support for scalable semantic retrieval.
+
 - **Method:** `db.collectionGroup('chunks').findNearest('embedding', queryVector, { limit: 5, distanceMeasure: 'COSINE' })`.
 
 ---
 
 ## 4. API Design (tRPC)
 
-The `ragRouter` handles both chat and admin-level ingestion.
+The `ragRouter` orchestrates the flow while remaining agnostic to the specific vector storage implementation.
 
 ### 4.1 Implementation Logic
 
 - **`chat`:**
   1. Validate input with `ChatQuerySchema`.
-  2. Embed query text.
-  3. Perform `findNearest` in Firestore.
-  4. Hydrate context and call Gemini for grounded generation.
+  2. Call Vertex AI to embed query text.
+  3. Query the `IVectorStore` (Firestore implementation).
+  4. Call Vertex AI (Gemini) for context-aware generation.
+
 - **`ingest`:**
-  1. Validate with `IngestDocSchema`.
-  2. Chunk document (max 1200 chars).
-  3. Batch embed chunks.
-  4. Transactionally store in Firestore.
+  1. Chunk document (max 1000 chars).
+  2. Call Vertex AI to batch embed chunks.
+  3. Store text and vectors in Firestore.
 
 ---
 
-## 5. Development Plan (TDD Roadmap)
+## 5. Development Roadmap (TDD Focus)
 
 ### Phase 1: Shared Domain & Configuration
 
 1. **Red:** Write tests for `rag.ts` schemas.
 2. **Green:** Implement schemas and export them.
 
-### Phase 2: Backend Adapters
+### Phase 2: Vertex AI Model Adapters
 
-1. **Red:** Write unit tests for `chunkText` and `embedTexts` (mocking API).
-2. **Green:** Implement `gemini.ts` adapter logic.
+1. **Red:** Unit tests for `embedTexts` and `generateAnswer` (mocking Cloud SDK).
+2. **Green:** Implement `gemini.ts` utilizing the `@google-cloud/vertexai` SDK.
 
-### Phase 3: Integration & UI
+### Phase 3: RAG Core & Integration
 
-1. **Red:** Integration test for `rag.chat` procedure with Firestore emulator.
+1. **Red:** Integration test for the Chat flow utilizing Firestore emulator for vector search.
 2. **Green:** Implement `ragRouter` and `RAGChat` component.
 
-### Phase 4: Final Verification
+---
 
-1. Playwright E2E tests for the full user flow.
-2. Performance audit for retrieval latency.
+## 6. Security & Infrastructure
+
+- **IAM:** Deploy with `aiplatform.user` and `datastore.user` roles.
+- **WIF:** Secure, keyless authentication via Workload Identity Federation.
