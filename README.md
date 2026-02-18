@@ -1,323 +1,135 @@
-# The Hytel Way: Monorepo Stack
+```markdown
+# Orion AI
 
-A production-ready monorepo template featuring React, TypeScript, Tailwind CSS, Shadcn UI, tRPC, and TanStack Query. Built with pnpm and Turborepo for optimal developer experience.
+Orion AI is a production-ready RAG (Retrieval-Augmented Generation) chatbot platform designed to provide accurate, cited answers from a custom knowledge base. Built on a modern monorepo stack, it leverages **Google Vertex AI** for intelligence and **Firebase** for serverless scalability.
 
-## Stack Overview
+## 🚀 Project Overview
 
-Think of building a web app like putting on a theater production!
+Orion AI enables users to ingest documents and query them using natural language. The system retrieves relevant context using Vector Search and generates answers using Gemini 2.5 Flash.
 
-| Tool               | Role            | Analogy                                        |
-| ------------------ | --------------- | ---------------------------------------------- |
-| **pnpm**           | Package Manager | The super-organized prop master                |
-| **Turborepo**      | Build System    | The stage manager coordinating tasks           |
-| **React + Vite**   | Frontend        | The stage and lighting system                  |
-| **TypeScript**     | Type Safety     | The script ensuring everyone knows their lines |
-| **Tailwind CSS**   | Styling         | The costume designer's fabric swatches         |
-| **Shadcn UI**      | Components      | Pre-made costume patterns                      |
-| **tRPC**           | API Layer       | The messenger between actors                   |
-| **TanStack Query** | Data Fetching   | Smart caching (remembers the script!)          |
-| **Vitest**         | Testing         | Dress rehearsals before the show               |
-| **Zod**            | Validation      | The bouncer checking IDs                       |
+| Component | Tech Choice | Role |
+| :--- | :--- | :--- |
+| **Frontend** | React + Vite | The interactive chat interface |
+| **Backend** | Firebase Functions | Orchestrates RAG logic and API requests |
+| **API Layer** | tRPC | Type-safe communication between Frontend & Backend |
+| **AI Engine** | Vertex AI | Embeddings (Gecko) & Generation (Gemini) |
+| **Vector DB** | Vector Search | Stores and retrieves semantic embeddings |
+| **Database** | Firestore | Stores raw document chunks and metadata |
 
-## Monorepo Structure
+## 📂 Monorepo Structure
 
-```
-├── .github/
-│   ├── workflows/        # CI/CD pipelines (ready to use!)
-│   ├── CODEOWNERS        # Auto-assign reviewers
-│   └── ISSUE_TEMPLATE/   # Issue & PR templates
-│
+This project is built with **Turborepo** and **pnpm** workspaces.
+
+```text
 ├── apps/
-│   ├── web/              # React frontend (Vite + Tailwind)
-│   │   ├── src/
-│   │   │   ├── App.tsx   # Main application component
-│   │   │   ├── hooks/    # Custom React hooks
-│   │   │   ├── lib/      # Utilities (tRPC client, query client)
-│   │   │   └── providers/# Context providers
-│   │   └── public/       # Static assets
+│   ├── web/              # 🎨 Frontend: React, Tailwind, Shadcn UI
+│   │   ├── src/components/ # Chat interface & RAG UI components
+│   │   └── src/hooks/      # tRPC hooks for data fetching
 │   │
-│   └── functions/        # tRPC backend
-│       └── src/trpc/     # API routers and procedures
+│   └── functions/        # ⚡ Backend: Firebase Cloud Functions
+│       ├── src/trpc/     # tRPC Routers (RagRouter, UserRouter)
+│       └── src/lib/      # Vertex AI & Firestore adapters
 │
 ├── packages/
-│   ├── ui/               # Shared React components
-│   │   ├── components/
-│   │   │   ├── Header.tsx
-│   │   │   ├── Counter.tsx
-│   │   │   └── ui/       # Shadcn UI components (Button, Card)
-│   │   └── lib/utils.ts  # Tailwind class merging utility
-│   │
-│   ├── shared/           # Shared Zod schemas & types
-│   │   └── src/schemas/  # User schemas, validation rules
-│   │
-│   ├── eslint-config/    # Shared ESLint configuration
-│   └── typescript-config/# Shared TypeScript configuration
+│   ├── ui/               # 🧩 Shared UI Component Library
+│   ├── shared/           # 🤝 Shared Zod Schemas (API Contracts)
+│   ├── config/           # ⚙️ Shared TS & Tooling Configs
+│   └── eslint-config/    # urp Linting Rules
 │
-├── docs/ci-cd/           # CI/CD documentation
-├── scripts/              # Setup scripts (WIF, etc.)
-├── turbo.json            # Turborepo pipeline configuration
-├── pnpm-workspace.yaml   # Workspace definition
-└── package.json          # Root scripts
+└── .github/              # 🤖 CI/CD Workflows (WIF + Deployments)
+
 ```
 
-## Quick Start
+## 🛠️ Quick Start
 
 ### Prerequisites
 
-- Node.js 20+
-- pnpm 8+
+* **Node.js 20+**
+* **pnpm 8+** (`npm install -g pnpm`)
+* **Google Cloud Project** (with Vertex AI API enabled)
 
-### Installation
+### 1. Installation
+
+Clone the repo and install dependencies:
 
 ```bash
-# Clone the repository
-git clone <your-repo-url>
-cd hytel-react-boilerplate
-
-# Install dependencies
+git clone [https://github.com/johnsmith545/orion-ai.git](https://github.com/johnsmith545/orion-ai.git)
+cd orion-ai
 pnpm install
+
 ```
 
-### Development
+### 2. Environment Setup
+
+Copy the example environment variables:
 
 ```bash
-# Start the development server
+cp .env.example .env
+
+```
+
+*Update `.env` with your GCP Project ID and Firebase config.*
+
+### 3. Start Development
+
+Run the entire stack (Frontend + Backend in watch mode):
+
+```bash
 pnpm dev
-# Opens at http://localhost:5173
 
-# Run all quality checks
-pnpm precheck
-
-# Run tests
-pnpm test
-
-# Build for production
-pnpm build
-
-# Lint code
-pnpm lint
-
-# Format code
-pnpm format
 ```
 
-## Key Features
+* **Web App:** [http://localhost:5173]()
+* **Backend:** [http://localhost:5001]()
 
-### Shared Components (`packages/ui`)
+## ⚡ Key Features
 
-Components in `@repo/ui` can be used by any app in the monorepo:
+### 🧠 RAG Architecture
 
-```tsx
-import { Header } from '@repo/ui/Header'
-import { Button } from '@repo/ui/Button'
-import { Card, CardHeader, CardContent } from '@repo/ui/Card'
-```
+The system implements a "Cheap-but-Real" architecture to minimize costs:
 
-### Type-Safe API (`apps/functions`)
+1. **Ingestion:** Admin uploads docs  Chunked  Embedded  Stored in Vector Search.
+2. **Retrieval:** User Query  Embedded  Vector Search (KNN)  Fetch Chunks.
+3. **Generation:** Context + Query  Gemini  Answer with Citations.
 
-tRPC provides end-to-end type safety:
+### 🛡️ Type-Safety
 
-```tsx
-// Backend (apps/functions)
-export const userRouter = router({
-  create: publicProcedure
-    .input(CreateUserSchema)
-    .mutation(({ input }) => ({ id: 'new-id', ...input })),
-})
+We use **tRPC** and **Zod** to ensure end-to-end type safety.
 
-// Frontend (apps/web)
-const { mutate } = trpc.user.create.useMutation()
-```
+* **Shared Schemas:** Defined in `packages/shared/src/schemas/rag.ts`.
+* **Frontend:** Gets autocompletion for backend procedures.
+* **Backend:** Automatically validates all inputs before processing.
 
-### Shared Schemas (`packages/shared`)
+## 🤖 CI/CD Pipelines
 
-Zod schemas shared between frontend and backend:
+Orion AI uses **GitHub Actions** with **Workload Identity Federation (WIF)** for keyless, secure deployments.
 
-```tsx
-import { UserSchema, CreateUserSchema } from '@repo/shared'
+| Environment | Branch | Trigger | URL |
+| --- | --- | --- | --- |
+| **Development** | `dev` | Push to branch | `dev.orion-ai.com` |
+| **Staging** | `stage` | Push to branch | `stage.orion-ai.com` |
+| **Production** | `main` | Manual Approval | `orion-ai.com` |
 
-// Type-safe validation everywhere!
-const user = UserSchema.parse(data)
-```
+*See `docs/ci-cd/` for detailed deployment guides.*
 
-## Scripts Reference
+## 🧪 Testing & Quality
 
-| Command              | Description                                   |
-| -------------------- | --------------------------------------------- |
-| `pnpm dev`           | Start development servers                     |
-| `pnpm build`         | Build all packages for production             |
-| `pnpm test`          | Run all tests                                 |
-| `pnpm test:coverage` | Run tests with coverage report                |
-| `pnpm lint`          | Lint all packages                             |
-| `pnpm lint:fix`      | Auto-fix lint issues                          |
-| `pnpm format`        | Format code with Prettier                     |
-| `pnpm format:check`  | Check code formatting                         |
-| `pnpm typecheck`     | Run TypeScript type checking                  |
-| `pnpm precheck`      | Run all checks (lint, typecheck, build, test) |
-| `pnpm changeset`     | Create a changeset for versioning             |
-| `pnpm sync:lint`     | Check dependency version consistency          |
-| `pnpm sync:fix`      | Fix dependency version mismatches             |
+* **Linting:** `pnpm lint` (ESLint)
+* **Type Checking:** `pnpm typecheck` (TypeScript)
+* **Unit Tests:** `pnpm test` (Vitest)
+* **Pre-Check:** `pnpm precheck` (Runs all the above)
+
+## 🤝 Contributing
+
+1. Create a feature branch from `dev`.
+2. Make changes and run `pnpm precheck`.
+3. If updating shared packages, run `pnpm changeset`.
+4. Open a PR to `dev`.
 
 ---
 
-## CI/CD Pipeline
+*Built with ❤️ by the Orion AI Team*
 
-This template includes a **fully configured CI/CD pipeline** using GitHub Actions and Workload Identity Federation (WIF) for secure deployments.
-
-### Branch Strategy
-
-| Branch  | Environment | Deployment                 |
-| ------- | ----------- | -------------------------- |
-| `dev`   | Development | Auto on push               |
-| `stage` | Staging     | Auto on push               |
-| `main`  | Production  | Manual (with confirmation) |
-
-### GitHub Actions Workflows
-
-| Workflow                | Trigger         | Purpose                              |
-| ----------------------- | --------------- | ------------------------------------ |
-| `ci.yml`                | PR & push       | Lint, typecheck, build, test         |
-| `deploy-dev.yml`        | Push to `dev`   | Deploy to development                |
-| `deploy-stage.yml`      | Push to `stage` | Deploy to staging                    |
-| `deploy-main.yml`       | Manual          | Deploy to production                 |
-| `release.yml`           | Push to `main`  | Automated versioning with Changesets |
-| `dependency-review.yml` | PR              | Check for vulnerable dependencies    |
-
-### Workload Identity Federation (WIF)
-
-All deployments use **keyless authentication** with GCP:
-
-- No stored service account keys
-- Short-lived tokens (expire in ~1 hour)
-- Full audit trail in GCP
-
-### Required GitHub Secrets
-
-Configure these in your repository settings:
-
-| Secret                           | Description           |
-| -------------------------------- | --------------------- |
-| `GCP_WORKLOAD_IDENTITY_PROVIDER` | WIF provider path     |
-| `GCP_SA_EMAIL`                   | Service account email |
-
-### Setup Instructions
-
-1. **Configure WIF** using `scripts/setup-wif.sh`
-2. **Add secrets** to GitHub repository settings
-3. **Create environments** (`dev`, `stage`, `main`) in GitHub settings
-4. **Push to branches** to trigger deployments
-
-See [docs/ci-cd/CI-CD-Pipeline-Guide.md](docs/ci-cd/CI-CD-Pipeline-Guide.md) for detailed setup instructions.
-
----
-
-## Development Tools
-
-### Git Hooks (Husky)
-
-Pre-commit hooks automatically run:
-
-- ESLint on staged `.ts`/`.tsx` files
-- Prettier on staged files
-
-### Changesets
-
-Semantic versioning for the monorepo:
-
-```bash
-# Create a changeset when you make changes
-pnpm changeset
-
-# The release workflow handles version bumps automatically
 ```
 
-### Syncpack
-
-Dependency consistency across packages:
-
-```bash
-pnpm sync:lint   # Check for mismatches
-pnpm sync:fix    # Auto-fix mismatches
-pnpm sync:list   # List all versions
 ```
-
----
-
-## Testing
-
-Each package has its own tests:
-
-```bash
-# Run all tests
-pnpm test
-
-# Run tests for specific package
-pnpm --filter web test
-pnpm --filter @repo/ui test
-pnpm --filter @repo/shared test
-pnpm --filter @repo/functions test
-
-# Run with coverage
-pnpm test:coverage
-```
-
----
-
-## Adding New Packages
-
-### New App
-
-```bash
-mkdir apps/new-app
-cd apps/new-app
-pnpm init
-```
-
-### New Shared Package
-
-```bash
-mkdir packages/new-package
-cd packages/new-package
-pnpm init
-```
-
-Packages are auto-discovered via `pnpm-workspace.yaml` (configured for `apps/*` and `packages/*`).
-
----
-
-## Version Requirements
-
-| Tool         | Minimum Version        |
-| ------------ | ---------------------- |
-| Node.js      | 20.x                   |
-| pnpm         | 8.x                    |
-| Turbo        | 2.x                    |
-| TypeScript   | 5.x                    |
-| Vitest       | 2.x                    |
-| ESLint       | 8.x                    |
-| Prettier     | 3.x                    |
-| Firebase CLI | 13.x (for deployment)  |
-| gcloud CLI   | Latest (for WIF setup) |
-
----
-
-## Useful Links
-
-- [Turborepo Documentation](https://turbo.build/repo/docs)
-- [Shadcn UI Components](https://ui.shadcn.com)
-- [tRPC Documentation](https://trpc.io)
-- [TanStack Query](https://tanstack.com/query)
-- [Tailwind CSS](https://tailwindcss.com)
-- [Vite](https://vitejs.dev)
-- [Changesets](https://github.com/changesets/changesets)
-- [Workload Identity Federation](https://cloud.google.com/iam/docs/workload-identity-federation)
-
----
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development workflow and guidelines.
-
----
-
-Built with ❤️ using Turborepo
