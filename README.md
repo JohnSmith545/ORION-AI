@@ -1,4 +1,3 @@
-```markdown
 # Orion AI
 
 Orion AI is a production-ready RAG (Retrieval-Augmented Generation) chatbot platform designed to provide accurate, cited answers from a custom knowledge base. Built on a modern monorepo stack, it leverages **Google Vertex AI** for intelligence and **Firebase** for serverless scalability.
