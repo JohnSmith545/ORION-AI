@@ -29,11 +29,11 @@ Based on the **Product Design Document** and **Technical Design Document**, here
 
 - `roles/storage.objectViewer` (for GCS ingestion).
 
-- [ ] **Monorepo Configuration**
-- Add secrets to GitHub/`.env`: `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION`, `VECTOR_INDEX_ID`, `VECTOR_ENDPOINT_ID` .
+- [x] **Monorepo Configuration**
+- [x] Add secrets to GitHub/`.env`: `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION`, `VECTOR_INDEX_ID`, `VECTOR_ENDPOINT_ID` .
 
-- Install backend dependencies in `apps/functions`:
-- `npm install @google/genai google-auth-library`.
+- [x] Install backend dependencies in `apps/functions`:
+- [x] `npm install @google/genai google-auth-library`.
 
 ---
 
@@ -41,12 +41,12 @@ Based on the **Product Design Document** and **Technical Design Document**, here
 
 **Goal:** Establish a common language for Chat and Ingestion data types.
 
-- [ ] **Create Shared Schemas**
-- Create file: `packages/shared/src/schemas/rag.ts`.
-- Implement `ChatQuerySchema`: `{ question, history }`.
-- Implement `ChatResponseSchema`: `{ answer, citations }`.
-- Implement `IngestDocSchema`: `{ sourceUri, sourceType, title }`.
-- Export these schemas in `packages/shared/src/index.ts`.
+- [x] **Create Shared Schemas**
+- [x] Create file: `packages/shared/src/schemas/rag.ts`.
+- [x] Implement `ChatQuerySchema`: `{ question, history }`.
+- [x] Implement `ChatResponseSchema`: `{ answer, citations }`.
+- [x] Implement `IngestDocSchema`: `{ sourceUri, sourceType, title }`.
+- [x] Export these schemas in `packages/shared/src/index.ts`.
 
 ---
 
