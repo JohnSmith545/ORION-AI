@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { ChatQuerySchema, ChatResponseSchema, IngestDocSchema } from './rag'
+import { ChatQuerySchema, ChatResponseSchema, IngestDocSchema } from './rag.ts'
 
 describe('ChatQuerySchema', () => {
   it('validates correct chat query', () => {
