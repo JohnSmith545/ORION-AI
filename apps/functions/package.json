@@ -19,6 +19,7 @@
     "@google/genai": "^1.41.0",
     "@repo/shared": "workspace:*",
     "@trpc/server": "^11.0.0-rc.660",
+    "google-auth-library": "^10.5.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
