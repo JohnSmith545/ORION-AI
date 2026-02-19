@@ -56,6 +56,27 @@
 
 ---
 
+### Phase 3.5: Authentication & User Management
+
+**Goal:** Secure user access with Firebase Authentication before the chat UI.
+
+- [x] **Firebase Setup**
+  - [x] Configure Firebase project and add `VITE_FIREBASE_*` variables to `.env`.
+  - [x] Implement `apps/web/src/lib/firebase.ts` (initialises `auth` and `db`).
+  - [x] Point Vite to monorepo-root `.env` via `envDir: '../../'` in `vite.config.ts`.
+- [x] **Auth Page & Layout**
+  - [x] Implement `apps/web/src/pages/Auth.tsx` (login/signup toggle).
+  - [x] Implement `apps/web/src/features/auth/components/AuthLayout.tsx` (cosmic-themed wrapper).
+- [x] **Login Form**
+  - [x] Email/password sign-in via `signInWithEmailAndPassword`.
+  - [x] Google sign-in via `signInWithPopup`.
+- [x] **Signup Form**
+  - [x] Implement `apps/web/src/features/auth/components/SignupForm.tsx`.
+- [x] **Routing**
+  - [x] Root `/` redirects to `/auth`; all unknown routes redirect to `/auth`.
+
+---
+
 ### Phase 4: Frontend Development
 
 **Goal:** A premium, responsive chat experience.
