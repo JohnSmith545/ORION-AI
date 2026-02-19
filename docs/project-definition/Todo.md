@@ -5,8 +5,8 @@
 **Goal:** Prepare the environment and establish types.
 
 - [ ] **Google Cloud Configuration**
-  - [ ] Enable APIs: `aiplatform.googleapis.com`, `firestore.googleapis.com`.
-  - [ ] Configure Service Account with `aiplatform.user` and `datastore.user` roles.
+  - [x] Enable APIs: `aiplatform.googleapis.com`, `firestore.googleapis.com`.
+  - [x] Configure Service Account with `aiplatform.user` and `datastore.user` roles.
   - [ ] Configure Workload Identity Federation (WIF) for CI/CD access.
 - [ ] **Monorepo Setup**
   - [x] Install `@google-cloud/vertexai` in `apps/functions`.
