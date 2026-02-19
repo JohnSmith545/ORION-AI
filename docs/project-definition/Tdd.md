@@ -15,12 +15,11 @@ ORION AI will be implemented as a new feature module within the existing monorep
 | **Shared Domain** | Zod            | `packages/shared/src/schemas/rag.ts`     | Shared validation schemas for Chat & Ingestion.      |
 | **Frontend UI**   | React + Shadcn | `apps/web/src/components/RAGChat.tsx`    | Chat interface using existing UI package components. |
 | **API Layer**     | tRPC           | `apps/functions/src/trpc/routers/rag.ts` | Type-safe endpoints for `chat` and `ingest`.         |
-| **Backend Logic** | Node.js        | `apps/functions/src/lib/vertex.ts`       | Adapter for Vertex AI SDK interaction.               |
-| **Vector Store**  | Vector Search  | Google Cloud Platform                    | External managed service (3072 dim index) .          |
+| **Backend Logic** | Node.js        | `apps/functions/src/lib/vertex.ts`       | Adapter for Vertex AI SDK (Embeddings).              |
+| **Vector Store**  | Firestore      | Google Cloud Platform                    | Native Vector Search (kNN) on documents.             |
 
 |
 | **Doc Store** | Firestore | Google Cloud Platform | External managed service (Native mode) .
-
 |
 
 ---
@@ -29,25 +28,24 @@ ORION AI will be implemented as a new feature module within the existing monorep
 
 ### 3.1 Firestore Schema
 
-We will use strict typing in the application layer to enforce this schema.
-
 - **`docs` Collection**
-- `id`: `string` (UUID)
-- `sourceType`: `'gcs' | 'api'`
-- `sourceUri`: `string`
-- `title`: `string`
-- `createdAt`: `Timestamp`
+
+  - `id`: `string` (UUID)
+  - `sourceType`: `'gcs' | 'api'`
+  - `sourceUri`: `string`
+  - `title`: `string`
+  - `createdAt`: `Timestamp`
 
 - **`docs/{docId}/chunks` Sub-collection**
-- `id`: `string` (Sequential index, e.g., "0001")
-- `text`: `string` (Max ~1000 chars)
-- `vectorDatapointId`: `string` (Format: `${docId}_${chunkId}`).
+  - `id`: `string` (Sequential index, e.g., "0001")
+  - `text`: `string` (Max ~1000 chars)
+  - `embedding`: `vector` (3072 dimensions)
 
 ### 3.2 Vector Search Index
 
 - **Model**: `gemini-embedding-001`
 - **Dimensions**: 3072
-- **Update Method**: StreamUpdate (for lower latency ingestion).
+- **Storage**: Firestore Native Vector Index (Composite).
 
 ---
 
@@ -109,13 +107,10 @@ export const ragRouter = router({
       // 1. Generate Embedding
       const queryVector = await embedText(input.question)
 
-      // 2. Vector Search
-      const neighbors = await searchVectors(queryVector)
+      // 2. Vector Search (Combined Search & Context Retrieval)
+      const context = await searchFirestoreVector(queryVector)
 
-      // 3. Hydrate Context from Firestore
-      const context = await fetchChunks(neighbors.ids)
-
-      // 4. Generate Response
+      // 3. Generate Response
       const response = await generateAnswer(input.question, context)
 
       return response
@@ -132,34 +127,25 @@ export const ragRouter = router({
 
 ## 5. Backend Implementation Details
 
-### 5.1 Vertex AI Adapter
+### 5.1 Vertex AI Adapter (Embeddings)
 
 **Location**: `apps/functions/src/lib/vertex.ts`
 
-This module wraps the `@google/genai` SDK to handle authentication and model interaction.
+This module wraps the `@google/genai` SDK to handle authentication and model interaction for generating embeddings.
 
 - **Dependencies**: Add `@google/genai` and `google-auth-library` to `apps/functions/package.json`.
-
 - **Authentication**: Use `GoogleAuth` to fetch an access token for the `Service Account` credential .
-
 - **Embedding**: Use `gemini-embedding-001`.
-- _Note_: Ensure `task_type` is set to `RETRIEVAL_DOCUMENT` for ingestion and `RETRIEVAL_QUERY` for chat to optimize vector quality.
 
-- **Vector Search**: Use the **REST API** (`indexEndpoints.findNeighbors`) instead of gRPC to minimize cold start times in Cloud Functions .
-
-### 5.2 Ingestion Logic
+### 5.2 Ingestion & Search Logic
 
 **Location**: `apps/functions/src/lib/ingest.ts`
 
 1. **Fetch**: Retrieve raw content from `sourceUri`.
-2. **Chunk**: Split text by double newlines (`\n\n`), merging small paragraphs until `maxChars=1000` is reached .
-
-3. **Batch**: Process embeddings in batches (e.g., 5 chunks per API call) to avoid rate limits.
-4. **Transaction**:
-
-- Write `doc` metadata to Firestore.
-- Write `chunks` to Firestore.
-- _Only_ after Firestore success, upsert vectors to Vertex AI.
+2. **Chunk**: Split text into segments < 1000 chars.
+3. **Embed**: Generate vectors for each chunk.
+4. **Store**: Save to Firestore `chunks` sub-collection with the `embedding` field.
+5. **Search**: Use `collectionGroup('chunks').findNearest('embedding', queryVector, { limit: 5, distanceMeasure: 'COSINE' })`.
 
 ---
 
