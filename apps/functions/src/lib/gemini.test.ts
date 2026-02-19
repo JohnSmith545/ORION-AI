@@ -1,36 +1,19 @@
 import { describe, it, expect, vi } from 'vitest'
 import { embedTexts, generateGroundedResponse } from './gemini.js'
 
-// Mock the Vertex AI SDK
-vi.mock('@google-cloud/vertexai', () => {
-  const embedContent = vi.fn().mockImplementation(() =>
-    Promise.resolve({
-      embeddings: [{ values: new Array(3072).fill(0.1) }],
-    })
-  )
+// Mock the Google Gen AI SDK
+vi.mock('@google/genai', () => {
+  const embedContent = vi.fn().mockResolvedValue({
+    embeddings: [{ values: new Array(3072).fill(0.1) }],
+  })
 
-  const generateContent = vi.fn().mockImplementation(() =>
-    Promise.resolve({
-      response: {
-        candidates: [
-          {
-            content: {
-              parts: [{ text: 'Grounded AI response with citations.' }],
-            },
-          },
-        ],
-      },
-    })
-  )
-
-  const getGenerativeModel = vi.fn().mockReturnValue({
-    embedContent,
-    generateContent,
+  const generateContent = vi.fn().mockResolvedValue({
+    text: 'Grounded AI response with citations.',
   })
 
   return {
-    VertexAI: vi.fn().mockImplementation(() => ({
-      getGenerativeModel,
+    GoogleGenAI: vi.fn().mockImplementation(() => ({
+      models: { embedContent, generateContent },
     })),
   }
 })
@@ -53,7 +36,6 @@ describe('Gemini Adapter', () => {
       const response = await generateGroundedResponse(query, context)
 
       expect(response).toBe('Grounded AI response with citations.')
-      // Verify mock was called with context included in prompt (implicitly checked by mock behavior)
     })
   })
 })
