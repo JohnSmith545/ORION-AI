@@ -54,6 +54,7 @@ The `ragRouter` orchestrates the flow while remaining agnostic to the specific v
 ### 4.1 Implementation Logic
 
 - **`chat`:**
+
   1. Validate input with `ChatQuerySchema`.
   2. Call Vertex AI to embed query text.
   3. Query the `IVectorStore` (Firestore implementation).
