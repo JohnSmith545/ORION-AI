@@ -32,19 +32,27 @@ describe('ChatQuerySchema', () => {
 describe('ChatResponseSchema', () => {
   it('validates correct chat response', () => {
     const result = ChatResponseSchema.safeParse({
-      answer: 'This is the answer.',
-      citations: [{ docId: 'doc1', title: 'Source 1', uri: 'https://example.com/1' }],
+      response: 'This is the answer.',
+      citations: ['https://example.com/1', 'https://example.com/2'],
     })
     expect(result.success).toBe(true)
   })
 
-  it('requires an answer', () => {
+  it('allows an empty citations array', () => {
+    const result = ChatResponseSchema.safeParse({
+      response: 'Answer with no sources.',
+      citations: [],
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('requires a response', () => {
     const result = ChatResponseSchema.safeParse({ citations: [] })
     expect(result.success).toBe(false)
   })
 
   it('requires citations to be an array', () => {
-    const result = ChatResponseSchema.safeParse({ answer: 'Test', citations: 'not-array' })
+    const result = ChatResponseSchema.safeParse({ response: 'Test', citations: 'not-array' })
     expect(result.success).toBe(false)
   })
 })
@@ -59,9 +67,33 @@ describe('IngestDocSchema', () => {
     expect(result.success).toBe(true)
   })
 
-  it('rejects invalid URLs', () => {
+  it('accepts a valid GCS URI with sourceType gcs', () => {
+    const result = IngestDocSchema.safeParse({
+      sourceUri: 'gs://my-bucket/docs/report.pdf',
+      sourceType: 'gcs',
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('rejects a plain string with no scheme', () => {
     const result = IngestDocSchema.safeParse({
       sourceUri: 'not-a-url',
+      sourceType: 'gcs',
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects a GCS URI when sourceType is api', () => {
+    const result = IngestDocSchema.safeParse({
+      sourceUri: 'gs://my-bucket/file.pdf',
+      sourceType: 'api',
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects an http URL when sourceType is gcs', () => {
+    const result = IngestDocSchema.safeParse({
+      sourceUri: 'https://example.com/doc.pdf',
       sourceType: 'gcs',
     })
     expect(result.success).toBe(false)
