@@ -15,23 +15,28 @@ export const ChatQuerySchema = z.object({
 
 // Output for the Chat Interface
 export const ChatResponseSchema = z.object({
-  answer: z.string(),
-  citations: z.array(
-    z.object({
-      docId: z.string(),
-      title: z.string(),
-      uri: z.string().optional(),
-      similarity: z.number().optional(),
-    })
-  ),
+  response: z.string(),
+  citations: z.array(z.string()),
 })
 
-// Input for Ingestion
-export const IngestDocSchema = z.object({
-  sourceUri: z.string().url(),
-  sourceType: z.enum(['gcs', 'api']),
-  title: z.string().optional(),
-})
+// Input for Ingestion.
+// sourceUri format must match sourceType:
+//   api  → standard http/https URL
+//   gcs  → Google Cloud Storage URI (gs://bucket/path)
+export const IngestDocSchema = z
+  .object({
+    sourceUri: z.string().min(1),
+    sourceType: z.enum(['gcs', 'api']),
+    title: z.string().optional(),
+  })
+  .refine(
+    ({ sourceType, sourceUri }) =>
+      sourceType === 'gcs' ? sourceUri.startsWith('gs://') : /^https?:\/\//.test(sourceUri),
+    {
+      message:
+        'sourceUri must be a gs:// URI for sourceType "gcs", or an http/https URL for sourceType "api"',
+    }
+  )
 
 export type ChatQuery = z.infer<typeof ChatQuerySchema>
 export type ChatResponse = z.infer<typeof ChatResponseSchema>

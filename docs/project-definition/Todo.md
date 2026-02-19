@@ -8,11 +8,11 @@
   - [x] Enable APIs: `aiplatform.googleapis.com`, `firestore.googleapis.com`.
   - [x] Configure Service Account with `aiplatform.user` and `datastore.user` roles.
   - [ ] Configure Workload Identity Federation (WIF) for CI/CD access.
-- [ ] **Monorepo Setup**
+- [x] **Monorepo Setup**
   - [x] Install `@google-cloud/vertexai` in `apps/functions`.
   - [x] Add `GOOGLE_CLOUD_PROJECT` and `GOOGLE_CLOUD_LOCATION` to `.env`.
-  - [ ] Create `apps/functions/src/lib/gemini.ts` scaffolding.
-- [ ] **Type Definition (TDD)**
+  - [x] Create `apps/functions/src/lib/gemini.ts` scaffolding.
+- [x] **Type Definition (TDD)**
   - [x] 🔴 Write Test: `packages/shared/src/schemas/rag.test.ts`.
   - [x] 🟢 Implement: `packages/shared/src/schemas/rag.ts` (Zod schemas).
 
@@ -22,18 +22,18 @@
 
 **Goal:** Process and store documents as searchable vectors.
 
-- [ ] **Document Loading**
-  - [ ] 🔴 Write Test: Mock GCS/URL fetch and verify raw text extraction.
-  - [ ] 🟢 Implement: `src/lib/ingest.ts` -> `fetchContent(url)`.
-- [ ] **Text Chunking**
-  - [ ] 🔴 Write Test: Verify chunking with overlapping windows (1000 chars, 200 overlap).
-  - [ ] 🟢 Implement: `src/lib/ingest.ts` -> `chunkText(text)`.
-- [ ] **Vertex AI Embeddings**
-  - [ ] 🔴 Write Test: Mock `text-embedding-004` response for multiple chunks.
-  - [ ] 🟢 Implement: `src/lib/gemini.ts` -> `embedTexts(chunks[])`.
-- [ ] **Firestore Storage**
-  - [ ] 🔴 Write Test: Verify batch write to `docs` and `docs/{id}/chunks` sub-collections.
-  - [ ] 🟢 Implement: `src/lib/ingest.ts` -> `saveToFirestore(doc, chunks)`.
+- [x] **Document Loading**
+  - [x] 🔴 Write Test: Mock GCS/URL fetch and verify raw text extraction.
+  - [x] 🟢 Implement: `src/lib/ingest.ts` -> `fetchContent(url)`.
+- [x] **Text Chunking**
+  - [x] 🔴 Write Test: Verify chunking with overlapping windows (1000 chars, 200 overlap).
+  - [x] 🟢 Implement: `src/lib/ingest.ts` -> `chunkText(text)`.
+- [x] **Vertex AI Embeddings**
+  - [x] 🔴 Write Test: Mock `text-embedding-004` response for multiple chunks.
+  - [x] 🟢 Implement: `src/lib/gemini.ts` -> `embedTexts(chunks[])`.
+- [x] **Firestore Storage**
+  - [x] 🔴 Write Test: Verify batch write to `docs` and `docs/{id}/chunks` sub-collections.
+  - [x] 🟢 Implement: `src/lib/ingest.ts` -> `saveToFirestore(doc, chunks)`.
 
 ---
 
@@ -41,18 +41,18 @@
 
 **Goal:** Conversational AI powered by context retrieval.
 
-- [ ] **Query Processing**
-  - [ ] 🔴 Write Test: Verify query embedding logic.
-  - [ ] 🟢 Implement: `src/lib/rag.ts` -> `getQueryEmbedding(userQuery)`.
-- [ ] **Semantic Retrieval**
-  - [ ] 🔴 Write Test: Verify `findNearest` (kNN) query returns top results.
-  - [ ] 🟢 Implement: `src/lib/rag.ts` -> `retrieveContext(vector)`.
-- [ ] **Grounding & Generation**
-  - [ ] 🔴 Write Test: Verify prompt template includes retrieved context and instructions.
-  - [ ] 🟢 Implement: `src/lib/gemini.ts` -> `generateGroundedResponse(query, context)`.
-- [ ] **tRPC Procedure**
-  - [ ] 🔴 Write Test: Integration test for `chat` mutation (Red-Green-Refactor).
-  - [ ] 🟢 Implement: `apps/functions/src/trpc/routers/rag.ts` -> `chat` procedure.
+- [x] **Query Processing**
+  - [x] 🔴 Write Test: Verify query embedding logic.
+  - [x] 🟢 Implement: `src/lib/rag.ts` -> `getQueryEmbedding(userQuery)`.
+- [x] **Semantic Retrieval**
+  - [x] 🔴 Write Test: Verify `findNearest` (kNN) query returns top results.
+  - [x] 🟢 Implement: `src/lib/rag.ts` -> `retrieveContext(vector)`.
+- [x] **Grounding & Generation**
+  - [x] 🔴 Write Test: Verify prompt template includes retrieved context and instructions.
+  - [x] 🟢 Implement: `src/lib/gemini.ts` -> `generateGroundedResponse(query, context)`.
+- [x] **tRPC Procedure**
+  - [x] 🔴 Write Test: Integration test for `chat` mutation (Red-Green-Refactor).
+  - [x] 🟢 Implement: `apps/functions/src/trpc/routers/rag.ts` -> `chat` procedure.
 
 ---
 
