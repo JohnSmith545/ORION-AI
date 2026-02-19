@@ -1,38 +1,34 @@
-import { VertexAI } from '@google-cloud/vertexai'
+import { GoogleGenAI } from '@google/genai'
 
-const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT || 'orion-ai-487801'
-const LOCATION = process.env.GOOGLE_CLOUD_LOCATION || 'us-central1'
+const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT ?? 'orion-ai-487801'
+const LOCATION = process.env.GOOGLE_CLOUD_LOCATION ?? 'us-central1'
+const EMBEDDING_MODEL = process.env.EMBEDDING_MODEL ?? 'gemini-embedding-001'
+const CHAT_MODEL = process.env.CHAT_MODEL ?? 'gemini-2.5-flash'
 
-// Initialize Vertex AI
-const vertexAI = new VertexAI({ project: PROJECT_ID, location: LOCATION })
-const embeddingModel = vertexAI.getGenerativeModel({ model: 'text-embedding-004' })
-const generativeModel = vertexAI.getGenerativeModel({
-  model: 'gemini-2.5-flash',
-  generationConfig: {
-    maxOutputTokens: 2048,
-    temperature: 0.2,
-  },
-})
+// Configure the SDK to route through Vertex AI using Application Default Credentials.
+process.env.GOOGLE_GENAI_USE_VERTEXAI = 'true'
+process.env.GOOGLE_CLOUD_PROJECT = PROJECT_ID
+process.env.GOOGLE_CLOUD_LOCATION = LOCATION
+
+const ai = new GoogleGenAI({})
 
 /**
  * Generates semantic embeddings for an array of strings.
+ * Sends all texts in a single batched request to minimise API round-trips.
  */
 export async function embedTexts(texts: string[]): Promise<number[][]> {
-  const promises = texts.map(async text => {
-    // The base GenerativeModel type in the SDK does not expose embedContent
-    // at the type level, but it works at runtime for embedding models.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const response = await (embeddingModel as any).embedContent({
-      content: { parts: [{ text }], role: 'user' },
-    })
-
-    if (!response.embeddings || response.embeddings.length === 0) {
-      throw new Error('No embeddings returned from Vertex AI')
-    }
-    return response.embeddings[0].values
+  const resp = await ai.models.embedContent({
+    model: EMBEDDING_MODEL,
+    contents: texts.map(t => ({ role: 'user', parts: [{ text: t }] })),
   })
 
-  return Promise.all(promises)
+  const vectors: number[][] = resp.embeddings?.map(e => e.values ?? []) ?? []
+
+  if (vectors.length !== texts.length) {
+    throw new Error(`Embedding count mismatch: got ${vectors.length}, expected ${texts.length}`)
+  }
+
+  return vectors
 }
 
 /**
@@ -47,8 +43,8 @@ export async function generateGroundedResponse(
     .join('\n\n')
 
   const prompt = `
-You are ORION AI, a helpful assistant. Use the following context to answer the user's question. 
-If the answer is not in the context, say you don't know based on the provided data. 
+You are ORION AI, a helpful assistant. Use the following context to answer the user's question.
+If the answer is not in the context, say you don't know based on the provided data.
 Always cite your sources using the source numbers provided in brackets, like [Source 1].
 
 CONTEXT:
@@ -61,19 +57,18 @@ STRICT INSTRUCTIONS:
 1. Only use the provided context.
 2. Maintain a professional tone.
 3. Use markdown for formatting.
-    `.trim()
+  `.trim()
 
-  const response = await generativeModel.generateContent({
+  const resp = await ai.models.generateContent({
+    model: CHAT_MODEL,
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
   })
 
-  const result = response.response
-  const candidate = result.candidates?.[0]
-  const textResult = candidate?.content?.parts?.[0]?.text
+  const text = resp.text
 
-  if (!textResult) {
+  if (!text) {
     throw new Error('Gemini failed to generate a response')
   }
 
-  return textResult
+  return text
 }
