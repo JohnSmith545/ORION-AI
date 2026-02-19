@@ -1,8 +1,8 @@
 import { GoogleGenAI } from '@google/genai'
 
-const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT ?? 'orion-ai-487801'
+const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT ?? 'orion-ai-2790b'
 const LOCATION = process.env.GOOGLE_CLOUD_LOCATION ?? 'us-central1'
-const EMBEDDING_MODEL = process.env.EMBEDDING_MODEL ?? 'gemini-embedding-001'
+const EMBEDDING_MODEL = process.env.EMBEDDING_MODEL ?? 'text-embedding-004'
 const CHAT_MODEL = process.env.CHAT_MODEL ?? 'gemini-2.5-flash'
 
 // Configure the SDK to route through Vertex AI using Application Default Credentials.

@@ -4,12 +4,12 @@
 
 **Goal:** Prepare the environment and establish types.
 
-- [ ] **Google Cloud Configuration**
+- [x] **Google Cloud Configuration**
   - [x] Enable APIs: `aiplatform.googleapis.com`, `firestore.googleapis.com`.
   - [x] Configure Service Account with `aiplatform.user` and `datastore.user` roles.
-  - [ ] Configure Workload Identity Federation (WIF) for CI/CD access.
+  - [x] Configure Workload Identity Federation (WIF) for CI/CD access.
 - [x] **Monorepo Setup**
-  - [x] Install `@google-cloud/vertexai` in `apps/functions`.
+  - [x] Install AI SDK in `apps/functions` (migrated from `@google-cloud/vertexai` → `@google/genai`).
   - [x] Add `GOOGLE_CLOUD_PROJECT` and `GOOGLE_CLOUD_LOCATION` to `.env`.
   - [x] Create `apps/functions/src/lib/gemini.ts` scaffolding.
 - [x] **Type Definition (TDD)**
@@ -82,5 +82,5 @@
 - [ ] **Observability**
   - [ ] Task: Add structured logging for retrieval similarity scores and LLM latency.
 - [ ] **Deployment**
-  - [ ] Task: Deploy to production via GitHub Actions.
+  - [x] Task: Deploy to production via GitHub Actions.
   - [ ] Task: Final A11y and performance audit.
