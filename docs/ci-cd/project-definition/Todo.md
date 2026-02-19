@@ -12,7 +12,7 @@
   - [x] Install `@google-cloud/vertexai` in `apps/functions`.
   - [x] Add `GOOGLE_CLOUD_PROJECT` and `GOOGLE_CLOUD_LOCATION` to `.env`.
   - [ ] Create `apps/functions/src/lib/gemini.ts` scaffolding.
-- [ ] **Type Definition (TDD)**
+- [x] **Type Definition (TDD)**
   - [x] 🔴 Write Test: `packages/shared/src/schemas/rag.test.ts`.
   - [x] 🟢 Implement: `packages/shared/src/schemas/rag.ts` (Zod schemas).
 

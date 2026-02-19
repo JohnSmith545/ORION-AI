@@ -31,6 +31,7 @@ The architecture prioritizes Vertex AI for intelligence while maintaining server
 We store text and vectors together in Firestore documents to enable atomic ingestion and simplified retrieval.
 
 - **Collection:** `docs`
+
   - `id`: Auto-ID
   - `title`: `string`
   - `sourceUri`: `string`
