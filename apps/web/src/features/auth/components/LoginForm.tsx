@@ -2,9 +2,11 @@ import React, { useState } from 'react'
 import { auth } from '../../../lib/firebase'
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth'
 
-interface LoginFormProps {}
+interface LoginFormProps {
+  onSignupClick?: () => void
+}
 
-export const LoginForm: React.FC<LoginFormProps> = () => {
+export const LoginForm: React.FC<LoginFormProps> = ({ onSignupClick }) => {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -134,6 +136,23 @@ export const LoginForm: React.FC<LoginFormProps> = () => {
             {loading ? 'Processing...' : 'Initialize Session'}
           </span>
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out"></div>
+        </button>
+
+        <div className="relative flex py-2 items-center">
+          <div className="flex-grow border-t border-white/10"></div>
+          <span className="flex-shrink-0 mx-4 text-white/30 text-[10px] uppercase tracking-widest">
+            Or
+          </span>
+          <div className="flex-grow border-t border-white/10"></div>
+        </div>
+
+        <button
+          className="w-full py-3 px-4 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white/90 font-display text-sm uppercase tracking-[0.10em] transition-all group disabled:opacity-50"
+          type="button"
+          onClick={onSignupClick}
+          disabled={loading}
+        >
+          Sign Up
         </button>
 
         <button
