@@ -30,7 +30,7 @@ set -euo pipefail
 # CONFIGURATION - Replace these placeholders with your actual values
 # ============================================================================
 
-PROJECT_ID="orion-ai-487801"          # Your Project ID
+PROJECT_ID="orion-ai-2790b"          # Your Project ID
 GITHUB_ORG="johnsmith545"             # Your GitHub Username or Org Name
 GITHUB_REPO="ORION-AI"                # Your Repository Name
 
