@@ -1,123 +1,107 @@
-Based on the **Product Design Document** and **Technical Design Document**, here is the comprehensive To-Do list for building ORION AI.
+# Todo: Utilizing Vertex AI (ORION AI RAG)
 
-### Phase 1: Foundation & Infrastructure Setup
+### Phase 1: Foundation & Project Setup
 
-**Goal:** Prepare Google Cloud resources and configure the monorepo for AI integration.
+**Goal:** Prepare the environment and establish types.
 
-- [ ] **GCP Project Configuration**
-- Enable required APIs: `aiplatform.googleapis.com`, `firestore.googleapis.com`.
-
-- Create **Vertex AI Vector Search Index**:
-- Dimensions: `3072` (to match `gemini-embedding-001`).
-
-- Update Method: `StreamUpdate` (for live ingestion).
-
-- Deploy Index to a public Endpoint (to allow access from Cloud Functions).
-
-- Create **Firestore Database** (Native mode) if not already present.
-
-- [ ] **IAM & Security Configuration**
-- Grant **Cloud Build Service Account** permissions:
-- `roles/run.admin`, `roles/artifactregistry.repoAdmin`, `roles/logging.logWriter` .
-
-- `roles/iam.serviceAccountUser` on the runtime service account.
-
-- Grant **Runtime Service Account** (App Engine default or custom) permissions:
-- `roles/aiplatform.user` (Vertex AI User).
-
-- `roles/datastore.user` (Firestore access).
-
-- `roles/storage.objectViewer` (for GCS ingestion).
-
-- [x] **Monorepo Configuration**
-- [x] Add secrets to GitHub/`.env`: `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION`, `VECTOR_INDEX_ID`, `VECTOR_ENDPOINT_ID` .
-
-- [x] Install backend dependencies in `apps/functions`:
-- [x] `npm install @google/genai google-auth-library`.
+- [x] **Google Cloud Configuration**
+  - [x] Enable APIs: `aiplatform.googleapis.com`, `firestore.googleapis.com`.
+  - [x] Configure Service Account with `aiplatform.user` and `datastore.user` roles.
+  - [x] Configure Workload Identity Federation (WIF) for CI/CD access.
+- [x] **Monorepo Setup**
+  - [x] Install AI SDK in `apps/functions` (migrated from `@google-cloud/vertexai` → `@google/genai`).
+  - [x] Add `GOOGLE_CLOUD_PROJECT` and `GOOGLE_CLOUD_LOCATION` to `.env`.
+  - [x] Create `apps/functions/src/lib/gemini.ts` scaffolding.
+- [x] **Type Definition (TDD)**
+  - [x] 🔴 Write Test: `packages/shared/src/schemas/rag.test.ts`.
+  - [x] 🟢 Implement: `packages/shared/src/schemas/rag.ts` (Zod schemas).
 
 ---
 
-### Phase 2: Shared Domain Layer
+### Phase 2: Ingestion Pipeline
 
-**Goal:** Establish a common language for Chat and Ingestion data types.
+**Goal:** Process and store documents as searchable vectors.
 
-- [x] **Create Shared Schemas**
-- [x] Create file: `packages/shared/src/schemas/rag.ts`.
-- [x] Implement `ChatQuerySchema`: `{ question, history }`.
-- [x] Implement `ChatResponseSchema`: `{ answer, citations }`.
-- [x] Implement `IngestDocSchema`: `{ sourceUri, sourceType, title }`.
-- [x] Export these schemas in `packages/shared/src/index.ts`.
-
----
-
-### Phase 3: Backend Implementation (`apps/functions`)
-
-**Goal:** Implement the "Brain" (AI logic) and "Spine" (API layer).
-
-- [ ] **Vertex AI Adapter (`src/lib/vertex.ts`)**
-- Implement `getAuthClient()` using `google-auth-library` for server-side ADC .
-
-- Implement `embedTexts(texts)` using `@google/genai` with `gemini-embedding-001` .
-
-- Implement `queryVectorSearch(vector)` using the REST API (`indexEndpoints.findNeighbors`) to minimize latency .
-
-- Implement `upsertDatapoints(datapoints)` for the ingestion pipeline .
-
-- [ ] **Ingestion Logic (`src/lib/ingest.ts`)**
-- Implement `chunkText(text)`: Split by double newlines/headings, capped at ~1200 characters.
-
-- Implement `ingestDocument` flow:
-
-1. Fetch content from URL/GCS.
-2. Generate chunks.
-3. Batch generate embeddings.
-4. Transactionally save to Firestore (`docs` + `chunks` collections) .
-
-5. Upsert vectors to Vertex AI.
-
-- [ ] **tRPC Router (`src/trpc/routers/rag.ts`)**
-- Create `ragRouter`.
-- Implement `ingest` mutation (protected by admin check).
-- Implement `chat` mutation:
-
-1. Embed input question.
-2. Search vectors.
-3. Hydrate context from Firestore.
-
-4. Construct "Grounded Generation" prompt .
-
-5. Call Gemini `generateContent`.
-
-- Add `ragRouter` to the main `appRouter`.
+- [x] **Document Loading**
+  - [x] 🔴 Write Test: Mock GCS/URL fetch and verify raw text extraction.
+  - [x] 🟢 Implement: `src/lib/ingest.ts` -> `fetchContent(url)`.
+- [x] **Text Chunking**
+  - [x] 🔴 Write Test: Verify chunking with overlapping windows (1000 chars, 200 overlap).
+  - [x] 🟢 Implement: `src/lib/ingest.ts` -> `chunkText(text)`.
+- [x] **Vertex AI Embeddings**
+  - [x] 🔴 Write Test: Mock `text-embedding-004` response for multiple chunks.
+  - [x] 🟢 Implement: `src/lib/gemini.ts` -> `embedTexts(chunks[])`.
+- [x] **Firestore Storage**
+  - [x] 🔴 Write Test: Verify batch write to `docs` and `docs/{id}/chunks` sub-collections.
+  - [x] 🟢 Implement: `src/lib/ingest.ts` -> `saveToFirestore(doc, chunks)`.
 
 ---
 
-### Phase 4: Frontend Implementation (`apps/web`)
+### Phase 3: RAG Retrieval & Generation
 
-**Goal:** Build the user interface for research and administration.
+**Goal:** Conversational AI powered by context retrieval.
 
-- [ ] **Admin Ingestion Interface**
-- Create page `src/pages/Admin.tsx` (or similar).
-- Add a form using `IngestDocSchema` to accept Source URIs.
-- Connect to `trpc.rag.ingest.useMutation`.
+- [x] **Query Processing**
+  - [x] 🔴 Write Test: Verify query embedding logic.
+  - [x] 🟢 Implement: `src/lib/rag.ts` -> `getQueryEmbedding(userQuery)`.
+- [x] **Semantic Retrieval**
+  - [x] 🔴 Write Test: Verify `findNearest` (kNN) query returns top results.
+  - [x] 🟢 Implement: `src/lib/rag.ts` -> `retrieveContext(vector)`.
+- [x] **Grounding & Generation**
+  - [x] 🔴 Write Test: Verify prompt template includes retrieved context and instructions.
+  - [x] 🟢 Implement: `src/lib/gemini.ts` -> `generateGroundedResponse(query, context)`.
+- [x] **tRPC Procedure**
+  - [x] 🔴 Write Test: Integration test for `chat` mutation (Red-Green-Refactor).
+  - [x] 🟢 Implement: `apps/functions/src/trpc/routers/rag.ts` -> `chat` procedure.
 
-- [ ] **Chat Component (`src/components/RAGChat.tsx`)**
-- Scaffold UI using `@repo/ui` components (`Card`, `Button`, `Input`).
-- Manage state for `messages` and `isLoading`.
-- Connect to `trpc.rag.chat.useMutation`.
-- Render Markdown responses and display citations (footnotes) from the response data.
+---
+
+### Phase 3.5: Authentication & User Management
+
+**Goal:** Secure user access with Firebase Authentication before the chat UI.
+
+- [x] **Firebase Setup**
+  - [x] Configure Firebase project and add `VITE_FIREBASE_*` variables to `.env`.
+  - [x] Implement `apps/web/src/lib/firebase.ts` (initialises `auth` and `db`).
+  - [x] Point Vite to monorepo-root `.env` via `envDir: '../../'` in `vite.config.ts`.
+- [x] **Auth Page & Layout**
+  - [x] Implement `apps/web/src/pages/Auth.tsx` (login/signup toggle).
+  - [x] Implement `apps/web/src/features/auth/components/AuthLayout.tsx` (cosmic-themed wrapper).
+- [x] **Login Form**
+  - [x] Email/password sign-in via `signInWithEmailAndPassword`.
+  - [x] Google sign-in via `signInWithPopup`.
+- [x] **Signup Form**
+  - [x] Implement `apps/web/src/features/auth/components/SignupForm.tsx`.
+- [x] **Routing**
+  - [x] Root `/` redirects to `/auth`; all unknown routes redirect to `/auth`.
+
+---
+
+### Phase 4: Frontend Development
+
+**Goal:** A premium, responsive chat experience.
+
+- [ ] **Core Chat Component**
+  - [ ] 🔴 Write Test: Verify message list renders user/model roles correctly.
+  - [ ] 🟢 Implement: `apps/web/src/components/RAGChat.tsx` state management.
+- [ ] **markdown Rendering**
+  - [ ] Task: Integrate `react-markdown` with syntax highlighting for code blocks.
+- [ ] **Citation System**
+  - [ ] Task: Implement footnote UI for displaying source links.
+- [ ] **Admin Dash**
+  - [ ] Task: Create file upload form and ingestion status tracker.
 
 ---
 
 ### Phase 5: Verification & Launch
 
-**Goal:** Ensure reliability and deploy.
+**Goal:** Production readiness and quality assurance.
 
-- [ ] **Local Testing**
-- Run `pnpm test` to verify schema validation and chunking logic.
-- Use `pnpm dev` to run the frontend and test the full flow with the local emulator (if configured) or dev environment.
-
+- [ ] **Automated Testing**
+  - [ ] Task: Unit tests for all adapters (100% logic coverage).
+  - [ ] Task: Playwright E2E tests (Ingest -> Chat -> Verify Answer).
+- [ ] **Observability**
+  - [ ] Task: Add structured logging for retrieval similarity scores and LLM latency.
 - [ ] **Deployment**
-- Push code to `dev` branch to trigger `deploy-dev.yml`.
-- Verify Cloud Functions deployment logs for IAM errors.
-- Perform a live test: Ingest a NASA/ESA document and ask a specific question to verify grounding.
+  - [x] Task: Deploy to production via GitHub Actions.
+  - [ ] Task: Final A11y and performance audit.
