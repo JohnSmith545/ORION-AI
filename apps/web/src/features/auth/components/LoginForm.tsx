@@ -1,12 +1,14 @@
 import React, { useState } from 'react'
-import { auth } from '../../../lib/firebase'
+import { auth, db } from '../../../lib/firebase'
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth'
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
+import { useEffect } from 'react'
 
 interface LoginFormProps {
-  onSignupClick?: () => void
+  onProgressChange?: (progress: number) => void
 }
 
-export const LoginForm: React.FC<LoginFormProps> = ({ onSignupClick }) => {
+export const LoginForm: React.FC<LoginFormProps> = ({ onProgressChange }) => {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -18,8 +20,19 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSignupClick }) => {
     setError(null)
 
     try {
-      await signInWithEmailAndPassword(auth, email, password)
-      console.log('Success: User logged in')
+      const userCredential = await signInWithEmailAndPassword(auth, email, password)
+      const user = userCredential.user
+
+      // Update lastSeen in Firestore
+      await setDoc(
+        doc(db, 'users', user.uid),
+        {
+          lastSeen: serverTimestamp(),
+        },
+        { merge: true }
+      )
+
+      console.log('Success: User logged in and presence updated')
     } catch (err: unknown) {
       const error = err as Error
       console.error('Login error:', error)
@@ -29,12 +42,34 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSignupClick }) => {
     }
   }
 
+  // Track progress
+  useEffect(() => {
+    if (!onProgressChange) return
+    const filledFields = [email, password].filter(field => field.length > 0).length
+    onProgressChange(filledFields / 2)
+  }, [email, password, onProgressChange])
+
   const handleGoogleLogin = async () => {
     const provider = new GoogleAuthProvider()
     setLoading(true)
     setError(null)
     try {
-      await signInWithPopup(auth, provider)
+      const result = await signInWithPopup(auth, provider)
+      const user = result.user
+
+      // Sync/Update in Firestore
+      await setDoc(
+        doc(db, 'users', user.uid),
+        {
+          uid: user.uid,
+          displayName: user.displayName,
+          email: user.email,
+          photoURL: user.photoURL,
+          lastSeen: serverTimestamp(),
+          provider: 'google',
+        },
+        { merge: true }
+      )
     } catch (err: unknown) {
       const error = err as Error
       console.error('Google login error:', error)
@@ -45,12 +80,15 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSignupClick }) => {
   }
 
   return (
-    <div className="glass-login rounded-2xl p-8 backdrop-blur-xl relative overflow-hidden group">
+    <div className="glass-login rounded-2xl p-[clamp(1.25rem,5vw,2rem)] backdrop-blur-xl relative overflow-hidden group">
       <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-50"></div>
       <div className="absolute -top-20 -right-20 w-40 h-40 bg-primary/10 blur-3xl rounded-full pointer-events-none"></div>
       <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-accent-violet/10 blur-3xl rounded-full pointer-events-none"></div>
 
-      <form onSubmit={handleLogin} className="flex flex-col gap-5 relative z-10">
+      <form
+        onSubmit={handleLogin}
+        className="flex flex-col gap-[clamp(1rem,3vw,1.25rem)] relative z-10"
+      >
         {error && (
           <div className="p-3 rounded bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-mono">
             {error}
@@ -59,7 +97,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSignupClick }) => {
 
         <div className="space-y-1">
           <label
-            className="text-xs font-mono text-white/50 uppercase tracking-wider ml-1"
+            className="text-[clamp(0.75rem,2vw,0.875rem)] font-mono text-white/50 uppercase tracking-wider ml-1"
             htmlFor="identity"
           >
             Identity
@@ -69,7 +107,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSignupClick }) => {
               person
             </span>
             <input
-              className="w-full pl-10 pr-4 py-3 text-sm text-white placeholder-white/20 rounded-lg input-glass focus:ring-0"
+              className="w-full pl-10 pr-4 py-3.5 text-base text-white placeholder-white/20 rounded-lg input-glass focus:ring-0"
               id="identity"
               placeholder="Access ID or Email"
               type="email"
@@ -82,7 +120,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSignupClick }) => {
 
         <div className="space-y-1">
           <label
-            className="text-xs font-mono text-white/50 uppercase tracking-wider ml-1"
+            className="text-[clamp(0.75rem,2vw,0.875rem)] font-mono text-white/50 uppercase tracking-wider ml-1"
             htmlFor="password"
           >
             Security Key
@@ -92,7 +130,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSignupClick }) => {
               lock
             </span>
             <input
-              className="w-full pl-10 pr-4 py-3 text-sm text-white placeholder-white/20 rounded-lg input-glass focus:ring-0"
+              className="w-full pl-10 pr-4 py-3.5 text-base text-white placeholder-white/20 rounded-lg input-glass focus:ring-0"
               id="password"
               placeholder="••••••••••••"
               type="password"
@@ -112,15 +150,15 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSignupClick }) => {
         <div className="flex items-center justify-between pt-2">
           <label className="flex items-center gap-2 cursor-pointer group">
             <input
-              className="w-3.5 h-3.5 rounded border-white/20 bg-white/5 text-primary focus:ring-offset-0 focus:ring-primary/50 transition-all checked:bg-primary border-white/10"
+              className="w-3.5 h-3.5 rounded border-white/20 bg-white/5 text-primary focus:ring-offset-0 focus:ring-primary/50 transition-all checked:bg-primary"
               type="checkbox"
             />
-            <span className="text-[11px] text-white/40 group-hover:text-white/60 transition-colors font-light">
+            <span className="text-[clamp(0.7rem,1.8vw,0.8rem)] text-white/40 group-hover:text-white/60 transition-colors font-light">
               Keep session active
             </span>
           </label>
           <a
-            className="text-[11px] text-primary/70 hover:text-primary transition-colors font-light tracking-wide hover:shadow-[0_0_8px_rgba(0,242,255,0.4)]"
+            className="text-[clamp(0.7rem,1.8vw,0.8rem)] text-primary/70 hover:text-primary transition-colors font-light tracking-wide hover:shadow-[0_0_8px_rgba(0,242,255,0.4)]"
             href="#"
           >
             Recover Access?
@@ -128,7 +166,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSignupClick }) => {
         </div>
 
         <button
-          className="mt-4 w-full py-3.5 px-4 rounded-lg btn-primary-glow text-white font-display text-sm uppercase tracking-[0.15em] relative overflow-hidden group disabled:opacity-50"
+          className="mt-4 w-full py-4 px-4 rounded-lg btn-primary-glow text-white font-display text-base uppercase tracking-[0.15em] relative overflow-hidden group disabled:opacity-50"
           type="submit"
           disabled={loading}
         >
@@ -138,25 +176,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSignupClick }) => {
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out"></div>
         </button>
 
-        <div className="relative flex py-2 items-center">
-          <div className="flex-grow border-t border-white/10"></div>
-          <span className="flex-shrink-0 mx-4 text-white/30 text-[10px] uppercase tracking-widest">
-            Or
-          </span>
-          <div className="flex-grow border-t border-white/10"></div>
-        </div>
-
         <button
-          className="w-full py-3 px-4 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white/90 font-display text-sm uppercase tracking-[0.10em] transition-all group disabled:opacity-50"
-          type="button"
-          onClick={onSignupClick}
-          disabled={loading}
-        >
-          Sign Up
-        </button>
-
-        <button
-          className="w-full py-3 px-4 rounded-lg btn-google-glass text-white/90 font-body text-sm relative overflow-hidden group flex items-center justify-center gap-3 disabled:opacity-50"
+          className="w-full py-3.5 px-4 rounded-lg btn-google-glass text-white/90 font-body text-base relative overflow-hidden group flex items-center justify-center gap-3 disabled:opacity-50"
           type="button"
           onClick={handleGoogleLogin}
           disabled={loading}
@@ -186,7 +207,9 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSignupClick }) => {
       </form>
 
       <div className="mt-8 pt-6 border-t border-white/5 flex flex-col items-center gap-4">
-        <p className="text-[10px] text-white/30 font-light">Or authenticate via quantum link</p>
+        <p className="text-[clamp(0.7rem,1.8vw,0.8rem)] text-white/30 font-light uppercase tracking-widest">
+          Or authenticate via quantum link
+        </p>
         <div className="flex gap-4">
           <button className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 hover:border-white/20 hover:shadow-[0_0_10px_rgba(255,255,255,0.1)] transition-all">
             <span className="material-symbols-outlined text-lg text-white/60">hub</span>

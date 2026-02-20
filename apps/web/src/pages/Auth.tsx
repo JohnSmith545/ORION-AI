@@ -12,11 +12,15 @@ import { SignupForm } from '../features/auth/components/SignupForm'
  */
 export const Auth: React.FC = () => {
   const [isLogin, setIsLogin] = useState(true)
+  const [progress, setProgress] = useState(0)
 
-  const toggleForm = () => setIsLogin(!isLogin)
+  const toggleForm = () => {
+    setIsLogin(!isLogin)
+    setProgress(0) // Reset progress on toggle
+  }
 
   return (
-    <CosmicBackground>
+    <CosmicBackground progress={progress}>
       <AuthLayout
         title={
           <>
@@ -24,13 +28,14 @@ export const Auth: React.FC = () => {
           </>
         }
         subtitle="Astronomical Intelligence"
+        progress={progress}
         footer={
-          <p className="text-[11px] text-white/30 font-light tracking-wide">
+          <p className="text-[clamp(0.75rem,2vw,0.875rem)] text-white/30 font-light tracking-widest uppercase font-mono">
             {isLogin ? (
               <>
                 New to the network?{' '}
                 <button
-                  className="text-white/60 hover:text-white underline decoration-white/20 underline-offset-4 transition-colors"
+                  className="text-primary/70 hover:text-primary underline decoration-primary/20 underline-offset-8 transition-all hover:drop-shadow-[0_0_8px_rgba(0,242,255,0.4)]"
                   onClick={toggleForm}
                   type="button"
                 >
@@ -41,7 +46,7 @@ export const Auth: React.FC = () => {
               <>
                 Existing operative?{' '}
                 <button
-                  className="text-white/60 hover:text-white underline decoration-white/20 underline-offset-4 transition-colors"
+                  className="text-primary/70 hover:text-primary underline decoration-primary/20 underline-offset-8 transition-all hover:drop-shadow-[0_0_8px_rgba(0,242,255,0.4)]"
                   onClick={toggleForm}
                   type="button"
                 >
@@ -53,9 +58,9 @@ export const Auth: React.FC = () => {
         }
       >
         {isLogin ? (
-          <LoginForm onSignupClick={toggleForm} />
+          <LoginForm onProgressChange={setProgress} />
         ) : (
-          <SignupForm onLoginClick={toggleForm} />
+          <SignupForm onProgressChange={setProgress} onLoginClick={toggleForm} />
         )}
       </AuthLayout>
     </CosmicBackground>
