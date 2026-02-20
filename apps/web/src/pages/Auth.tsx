@@ -34,7 +34,7 @@ export const Auth: React.FC = () => {
                   onClick={toggleForm}
                   type="button"
                 >
-                  Request clearance
+                  Sign Up
                 </button>
               </>
             ) : (
@@ -52,7 +52,11 @@ export const Auth: React.FC = () => {
           </p>
         }
       >
-        {isLogin ? <LoginForm /> : <SignupForm />}
+        {isLogin ? (
+          <LoginForm onSignupClick={toggleForm} />
+        ) : (
+          <SignupForm onLoginClick={toggleForm} />
+        )}
       </AuthLayout>
     </CosmicBackground>
   )

@@ -3,58 +3,55 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { App } from './App'
 
 describe('App', () => {
-  it('renders the header with title', () => {
+  it('renders the auth page by default', () => {
     render(<App />)
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('The Hytel Way')
+    expect(screen.getByText('ORION')).toBeInTheDocument()
+    expect(screen.getByText('AI')).toBeInTheDocument()
+    expect(screen.getByText('Astronomical Intelligence')).toBeInTheDocument()
   })
 
-  it('renders the counter with initial value of 0', () => {
+  it('renders login form by default', () => {
     render(<App />)
-    expect(screen.getByText('0')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /initialize session/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /establish connection/i })).not.toBeInTheDocument()
   })
 
-  it('increments the counter when clicking increase button', () => {
+  it('toggles to signup form when clicking "Sign Up" in footer', () => {
     render(<App />)
-    const increaseButton = screen.getByRole('button', { name: /increment counter/i })
-    fireEvent.click(increaseButton)
-    expect(screen.getByText('1')).toBeInTheDocument()
+    // There are two "Sign Up" buttons: one in LoginForm, one in Footer.
+    // LoginForm renders first (as children of AuthLayout), then Footer.
+    const signupButtons = screen.getAllByRole('button', { name: /sign up/i })
+    const footerSignup = signupButtons[signupButtons.length - 1] // Footer is last
+
+    fireEvent.click(footerSignup)
+
+    expect(screen.getByRole('button', { name: /establish connection/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /initialize session/i })).not.toBeInTheDocument()
   })
 
-  it('decrements the counter when clicking decrease button', () => {
+  it('toggles to signup form when clicking "Sign Up" in login form', () => {
     render(<App />)
-    const decreaseButton = screen.getByRole('button', { name: /decrement counter/i })
-    fireEvent.click(decreaseButton)
-    expect(screen.getByText('-1')).toBeInTheDocument()
+    const signupButtons = screen.getAllByRole('button', { name: /sign up/i })
+    const formSignup = signupButtons[0] // Form is first
+
+    fireEvent.click(formSignup)
+
+    expect(screen.getByRole('button', { name: /establish connection/i })).toBeInTheDocument()
   })
 
-  it('resets counter to zero when clicking reset button', () => {
+  it('toggles back to login form from signup', () => {
     render(<App />)
-    const increaseButton = screen.getByRole('button', { name: /increment counter/i })
-    const resetButton = screen.getByRole('button', { name: /reset/i })
+    // Navigate to signup first
+    const signupButtons = screen.getAllByRole('button', { name: /sign up/i })
+    fireEvent.click(signupButtons[0])
 
-    // Increment a few times
-    fireEvent.click(increaseButton)
-    fireEvent.click(increaseButton)
-    expect(screen.getByText('2')).toBeInTheDocument()
+    // Now in signup form. There are likely two "Log In" buttons (form and footer).
+    // Let's use flexible regex to find them.
+    const loginButtons = screen.getAllByRole('button', { name: /log in/i })
+    const footerLogin = loginButtons[loginButtons.length - 1] // Footer is last
 
-    // Reset
-    fireEvent.click(resetButton)
-    expect(screen.getByText('0')).toBeInTheDocument()
-  })
+    fireEvent.click(footerLogin)
 
-  it('renders the stack overview card', () => {
-    render(<App />)
-    expect(screen.getByText('Stack Overview', { exact: false })).toBeInTheDocument()
-  })
-
-  it('renders the monorepo structure card', () => {
-    render(<App />)
-    expect(screen.getByText('Monorepo Structure', { exact: false })).toBeInTheDocument()
-  })
-
-  it('renders Vite and React logos', () => {
-    render(<App />)
-    expect(screen.getByAltText('Vite logo')).toBeInTheDocument()
-    expect(screen.getByAltText('React logo')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /initialize session/i })).toBeInTheDocument()
   })
 })
