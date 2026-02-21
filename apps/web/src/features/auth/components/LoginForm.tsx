@@ -1,14 +1,15 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { auth, db } from '../../../lib/firebase'
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth'
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
-import { useEffect } from 'react'
 
 interface LoginFormProps {
   onProgressChange?: (progress: number) => void
 }
 
 export const LoginForm: React.FC<LoginFormProps> = ({ onProgressChange }) => {
+  const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -33,6 +34,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onProgressChange }) => {
       )
 
       console.log('Success: User logged in and presence updated')
+      navigate('/dashboard', { replace: true })
     } catch (err: unknown) {
       const error = err as Error
       console.error('Login error:', error)
@@ -70,6 +72,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onProgressChange }) => {
         },
         { merge: true }
       )
+      navigate('/dashboard', { replace: true })
     } catch (err: unknown) {
       const error = err as Error
       console.error('Google login error:', error)

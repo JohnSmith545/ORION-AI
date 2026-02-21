@@ -51,6 +51,7 @@ import './style.css'
 
 // Import our new Cosmic Authentication page
 import { Auth } from './pages/Auth'
+import { Dashboard } from './pages/Dashboard'
 
 /**
  * Main App Component
@@ -60,6 +61,7 @@ export function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/auth" element={<Auth />} />
+        <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/" element={<Navigate to="/auth" replace />} />
         <Route path="*" element={<Navigate to="/auth" replace />} />
       </Routes>
