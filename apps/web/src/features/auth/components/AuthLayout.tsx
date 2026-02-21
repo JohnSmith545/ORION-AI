@@ -24,7 +24,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
     <>
       <div className="text-center mb-[clamp(2rem,6vh,3rem)] relative">
         <div className="inline-flex items-center justify-center mb-4 relative">
-          <span className="material-symbols-outlined text-[clamp(3rem,10vw,4.5rem)] text-white font-thin relative z-10 drop-shadow-[0_0_15px_rgba(0,242,255,0.6)] text-primary">
+          <span className="material-symbols-outlined text-[clamp(3rem,10vw,4.5rem)] font-thin relative z-10 drop-shadow-[0_0_15px_rgba(0,242,255,0.6)] text-primary">
             blur_on
           </span>
           <div className="absolute inset-0 bg-primary/30 blur-xl rounded-full"></div>
