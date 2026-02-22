@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
+import { trpc } from '../../lib/trpc'
 
 export interface ChatMessage {
   id: string
@@ -6,10 +7,8 @@ export interface ChatMessage {
   content: string
   timestamp?: string
   habitabilityPercent?: number
+  citations?: string[]
 }
-
-const PLACEHOLDER_AI_REPLY =
-  'Request received. Orion AI is processing your query across the neural network.'
 
 const PROXIMA_REPLY = {
   paragraphs: [
@@ -25,6 +24,7 @@ function formatTime() {
 }
 
 export const DashboardChatSection: React.FC = () => {
+  const chatMutation = trpc.rag.chat.useMutation()
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
     const t = '14:02'
     return [
@@ -55,7 +55,7 @@ export const DashboardChatSection: React.FC = () => {
     })
   }, [messages, isTyping])
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     const trimmed = inputValue.trim()
     if (!trimmed) return
@@ -71,18 +71,40 @@ export const DashboardChatSection: React.FC = () => {
     setInputValue('')
     setIsTyping(true)
 
-    setTimeout(() => {
+    const history = messages.map(m => ({
+      role: (m.role === 'assistant' ? 'model' : 'user') as 'user' | 'model',
+      text: m.content,
+    }))
+
+    try {
+      const result = await chatMutation.mutateAsync({
+        question: trimmed,
+        history: history.length > 0 ? history : undefined,
+      })
       setMessages(prev => [
         ...prev,
         {
           id: `ai-${Date.now()}`,
           role: 'assistant',
-          content: PLACEHOLDER_AI_REPLY,
+          content: result.response,
+          timestamp: formatTime(),
+          citations: result.citations?.length ? result.citations : undefined,
+        },
+      ])
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Request failed. Try again.'
+      setMessages(prev => [
+        ...prev,
+        {
+          id: `ai-${Date.now()}`,
+          role: 'assistant',
+          content: `Unable to complete your query: ${errorMessage}`,
           timestamp: formatTime(),
         },
       ])
+    } finally {
       setIsTyping(false)
-    }, 1500)
+    }
   }
 
   return (
@@ -129,6 +151,18 @@ export const DashboardChatSection: React.FC = () => {
                       {p}
                     </p>
                   ))}
+                  {msg.citations && msg.citations.length > 0 && (
+                    <div className="mt-3 pt-2 border-t border-white/10">
+                      <div className="text-[10px] font-mono text-primary/70 uppercase tracking-wider mb-1">
+                        Sources
+                      </div>
+                      <ul className="text-[10px] text-white/50 font-mono space-y-0.5 break-all">
+                        {msg.citations.map((src, i) => (
+                          <li key={i}>{src}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                   {msg.habitabilityPercent != null && (
                     <div className="mt-4 p-3 bg-black/40 rounded border border-white/10 flex gap-3 items-center backdrop-blur-md shadow-inner">
                       <span className="material-symbols-outlined text-primary/90">science</span>

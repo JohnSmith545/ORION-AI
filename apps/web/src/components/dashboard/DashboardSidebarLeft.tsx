@@ -1,9 +1,93 @@
-import React from 'react'
+import React, { useState } from 'react'
+import { trpc } from '../../lib/trpc'
 
 export const DashboardSidebarLeft: React.FC = () => {
+  const [ingestUri, setIngestUri] = useState('')
+  const [ingestTitle, setIngestTitle] = useState('')
+  const [ingestType, setIngestType] = useState<'api' | 'gcs'>('api')
+  const ingestMutation = trpc.rag.ingest.useMutation()
+
+  const handleIngest = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const uri = ingestUri.trim()
+    if (!uri) return
+    try {
+      await ingestMutation.mutateAsync({
+        sourceUri: uri,
+        sourceType: ingestType,
+        title: ingestTitle.trim() || undefined,
+      })
+      setIngestUri('')
+      setIngestTitle('')
+    } catch {
+      // Error surfaced via mutation state / toast could be added
+    }
+  }
+
   return (
     <aside className="glass-panel rounded-xl flex flex-col justify-between py-6 px-4 relative overflow-hidden shadow-panel-glow">
       <div className="space-y-8">
+        <div>
+          <h3 className="text-[10px] font-mono uppercase tracking-[0.2em] text-primary/80 mb-4 flex items-center gap-2 border-b border-primary/20 pb-2">
+            <span className="material-symbols-outlined text-sm">upload_file</span>
+            Ingest data
+          </h3>
+          <form onSubmit={handleIngest} className="space-y-2">
+            <input
+              type="text"
+              value={ingestUri}
+              onChange={e => setIngestUri(e.target.value)}
+              placeholder={ingestType === 'gcs' ? 'gs://bucket/path' : 'https://...'}
+              className="w-full px-2 py-1.5 text-xs bg-white/5 border border-white/10 rounded text-white placeholder-white/30 focus:border-primary/40 focus:outline-none"
+              aria-label="Source URI"
+            />
+            <input
+              type="text"
+              value={ingestTitle}
+              onChange={e => setIngestTitle(e.target.value)}
+              placeholder="Title (optional)"
+              className="w-full px-2 py-1.5 text-xs bg-white/5 border border-white/10 rounded text-white placeholder-white/30 focus:border-primary/40 focus:outline-none"
+              aria-label="Document title"
+            />
+            <div className="flex gap-2">
+              <label className="flex items-center gap-1.5 text-[10px] text-white/60 cursor-pointer">
+                <input
+                  type="radio"
+                  name="sourceType"
+                  checked={ingestType === 'api'}
+                  onChange={() => setIngestType('api')}
+                  className="rounded border-white/20 bg-white/5 text-primary"
+                />
+                API
+              </label>
+              <label className="flex items-center gap-1.5 text-[10px] text-white/60 cursor-pointer">
+                <input
+                  type="radio"
+                  name="sourceType"
+                  checked={ingestType === 'gcs'}
+                  onChange={() => setIngestType('gcs')}
+                  className="rounded border-white/20 bg-white/5 text-primary"
+                />
+                GCS
+              </label>
+            </div>
+            <button
+              type="submit"
+              disabled={ingestMutation.isPending}
+              className="w-full py-1.5 text-[10px] font-mono uppercase tracking-wider bg-primary/20 border border-primary/40 text-primary rounded hover:bg-primary/30 disabled:opacity-50"
+            >
+              {ingestMutation.isPending ? 'Ingesting…' : 'Ingest'}
+            </button>
+            {ingestMutation.isSuccess && (
+              <p className="text-[9px] text-primary/80 font-mono">
+                Saved: {ingestMutation.data?.docId}
+              </p>
+            )}
+            {ingestMutation.isError && (
+              <p className="text-[9px] text-red-400/90 font-mono">{ingestMutation.error.message}</p>
+            )}
+          </form>
+        </div>
         <div>
           <h3 className="text-[10px] font-mono uppercase tracking-[0.2em] text-primary/80 mb-4 flex items-center gap-2 border-b border-primary/20 pb-2">
             <span className="material-symbols-outlined text-sm">history</span>

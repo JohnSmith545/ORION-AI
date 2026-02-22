@@ -7,22 +7,30 @@ import { ingestDocument } from '../../lib/ingest.js'
 export const ragRouter = router({
   /**
    * Main chat procedure: Retrieval-Augmented Generation.
+   * 1. Embed the user's question into a vector
+   * 2. Search the database for relevant context chunks
+   * 3. Send to Gemini to generate a grounded response
    */
   chat: publicProcedure.input(ChatQuerySchema).mutation(async ({ input }) => {
-    const { question } = input
+    try {
+      const { question } = input
 
-    // 1. Embed the query
-    const queryVector = await getQueryEmbedding(question)
+      // 1. Convert the user's question into a mathematical vector
+      const vector = await getQueryEmbedding(question)
 
-    // 2. Retrieve context from Firestore
-    const context = await retrieveContext(queryVector)
+      // 2. Search your database for the context chunks
+      const context = await retrieveContext(vector, 3)
 
-    // 3. Generate grounded response
-    const response = await generateGroundedResponse(question, context)
+      // 3. Send to Gemini
+      const response = await generateGroundedResponse(question, context)
 
-    return {
-      response,
-      citations: context.map(c => c.sourceUri),
+      // 4. Return exactly what DashboardChatSection expects
+      return {
+        response,
+        citations: Array.from(new Set(context.map(c => c.sourceUri))),
+      }
+    } catch (error) {
+      throw new Error(error instanceof Error ? error.message : 'Failed to generate AI response')
     }
   }),
 
