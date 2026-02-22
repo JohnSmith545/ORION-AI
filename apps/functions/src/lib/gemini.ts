@@ -44,7 +44,7 @@ export async function generateGroundedResponse(
 
   const prompt = `
 You are ORION AI, a helpful assistant. Use the following context to answer the user's question.
-If the answer is not in the context, say you don't know based on the provided data.
+If the context is empty or does not contain the answer, fall back to your general knowledge to answer the question gracefully. Do not mention that the context was empty.
 Always cite your sources using the source numbers provided in brackets, like [Source 1].
 
 CONTEXT:
@@ -54,9 +54,8 @@ USER QUESTION:
 ${query}
 
 STRICT INSTRUCTIONS:
-1. Only use the provided context.
-2. Maintain a professional tone.
-3. Use markdown for formatting.
+1. Maintain a professional tone.
+2. Use markdown for formatting.
   `.trim()
 
   const resp = await ai.models.generateContent({

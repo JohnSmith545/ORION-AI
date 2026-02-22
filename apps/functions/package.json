@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "main": "src/index.ts",
+  "main": "dist/index.js",
   "exports": {
     ".": "./src/index.ts",
     "./router": "./src/trpc/router.ts"
@@ -19,15 +19,23 @@
     "@google/genai": "^1.41.0",
     "@repo/shared": "workspace:*",
     "@trpc/server": "^11.0.0-rc.660",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
     "firebase-admin": "^13.6.1",
+    "firebase-functions": "^6.3.2",
     "google-auth-library": "^10.5.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
     "@repo/config": "workspace:*",
     "@repo/eslint-config": "workspace:*",
     "eslint": "^8.57.0",
     "typescript": "5.5.4",
     "vitest": "^2.1.8"
+  },
+  "engines": {
+    "node": "24.13.0"
   }
 }

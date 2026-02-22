@@ -1,4 +1,4 @@
-import { publicProcedure, router } from '../trpc'
+import { publicProcedure, router } from '../trpc.js'
 import { ChatQuerySchema, IngestDocSchema } from '@repo/shared'
 import { getQueryEmbedding, retrieveContext } from '../../lib/rag.js'
 import { generateGroundedResponse } from '../../lib/gemini.js'
