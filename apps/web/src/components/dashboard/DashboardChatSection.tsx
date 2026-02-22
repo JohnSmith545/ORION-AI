@@ -16,6 +16,78 @@ function formatTime() {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
+/** Renders basic markdown: **bold**, bullet points (* / -), and numbered lists. */
+function renderMarkdown(text: string): React.ReactNode[] {
+  const lines = text.split('\n')
+  const elements: React.ReactNode[] = []
+  let currentList: React.ReactNode[] = []
+  let listType: 'ul' | 'ol' | null = null
+
+  const flushList = () => {
+    if (currentList.length > 0 && listType) {
+      const Tag = listType
+      const cls =
+        listType === 'ul'
+          ? 'list-disc list-inside space-y-1 mt-2 mb-2 text-white/80'
+          : 'list-decimal list-inside space-y-1 mt-2 mb-2 text-white/80'
+      elements.push(
+        <Tag key={`list-${elements.length}`} className={cls}>
+          {currentList}
+        </Tag>
+      )
+      currentList = []
+      listType = null
+    }
+  }
+
+  const formatInline = (str: string): React.ReactNode[] => {
+    const parts: React.ReactNode[] = []
+    const regex = /\*\*(.+?)\*\*/g
+    let lastIndex = 0
+    let match: RegExpExecArray | null
+    while ((match = regex.exec(str)) !== null) {
+      if (match.index > lastIndex) parts.push(str.slice(lastIndex, match.index))
+      parts.push(
+        <strong key={`b-${match.index}`} className="font-semibold text-primary/90">
+          {match[1]}
+        </strong>
+      )
+      lastIndex = regex.lastIndex
+    }
+    if (lastIndex < str.length) parts.push(str.slice(lastIndex))
+    return parts
+  }
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+    const bulletMatch = line.match(/^\s*[*-]\s+(.*)/)
+    const numberMatch = line.match(/^\s*(\d+)\.\s+(.*)/)
+
+    if (bulletMatch) {
+      if (listType !== 'ul') flushList()
+      listType = 'ul'
+      currentList.push(<li key={`li-${i}`}>{formatInline(bulletMatch[1])}</li>)
+    } else if (numberMatch) {
+      if (listType !== 'ol') flushList()
+      listType = 'ol'
+      currentList.push(<li key={`li-${i}`}>{formatInline(numberMatch[2])}</li>)
+    } else {
+      flushList()
+      if (line.trim() === '') {
+        elements.push(<br key={`br-${i}`} />)
+      } else {
+        elements.push(
+          <p key={`p-${i}`} className={i > 0 ? 'mt-2' : ''}>
+            {formatInline(line)}
+          </p>
+        )
+      }
+    }
+  }
+  flushList()
+  return elements
+}
+
 export const DashboardChatSection: React.FC = () => {
   const { user } = useAuth()
   const chatMutation = trpcApi.rag.chat.useMutation()
@@ -137,11 +209,7 @@ export const DashboardChatSection: React.FC = () => {
               </div>
               <div className="max-w-[70%]">
                 <div className="chat-bubble ai rounded-2xl rounded-tl-sm p-5 text-sm font-light text-white/95 leading-relaxed">
-                  {msg.content.split('\n\n').map((p, i) => (
-                    <p key={i} className={i > 0 ? 'mt-3' : ''}>
-                      {p}
-                    </p>
-                  ))}
+                  {renderMarkdown(msg.content)}
                   {msg.citations && msg.citations.length > 0 && (
                     <div className="mt-3 pt-2 border-t border-white/10">
                       <div className="text-[10px] font-mono text-primary/70 uppercase tracking-wider mb-1">
