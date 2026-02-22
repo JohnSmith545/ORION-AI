@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { trpc } from '../../lib/trpc'
+import { trpc as trpcApi } from '../../lib/trpc'
+import { useAuth } from '../../hooks/useAuth'
 
 export interface ChatMessage {
   id: string
@@ -10,40 +11,30 @@ export interface ChatMessage {
   citations?: string[]
 }
 
-const PROXIMA_REPLY = {
-  paragraphs: [
-    'Accessing spectral analysis database...',
-    'Proxima Centauri b shows traces of a dense atmosphere. Spectroscopic signatures indicate high levels of carbon dioxide and potential nitrogen. The equilibrium temperature is estimated at -39°C, suggesting liquid water could exist only in specific equatorial regions.',
-  ],
-  habitabilityPercent: 45,
-}
-
 function formatTime() {
   const d = new Date()
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
 export const DashboardChatSection: React.FC = () => {
-  const chatMutation = trpc.rag.chat.useMutation()
-  const [messages, setMessages] = useState<ChatMessage[]>(() => {
-    const t = '14:02'
-    return [
-      {
-        id: 'user-1',
-        role: 'user',
-        content:
-          'Analyze the atmospheric composition of Proxima Centauri b and estimate habitability probability.',
-        timestamp: t,
-      },
-      {
-        id: 'ai-1',
-        role: 'assistant',
-        content: `${PROXIMA_REPLY.paragraphs[0]}\n\n${PROXIMA_REPLY.paragraphs[1]}`,
-        timestamp: t,
-        habitabilityPercent: PROXIMA_REPLY.habitabilityPercent,
-      },
-    ]
-  })
+  const { user } = useAuth()
+  const chatMutation = trpcApi.rag.chat.useMutation()
+  const [messages, setMessages] = useState<ChatMessage[]>([])
+
+  useEffect(() => {
+    if (messages.length === 0 && user) {
+      const t = formatTime()
+      const userName = user.displayName || user.email?.split('@')[0] || 'Operative'
+      setMessages([
+        {
+          id: 'ai-initial',
+          role: 'assistant',
+          content: `Welcome back, ${userName}. Your celestial connection is secure. Awaiting your next space query.`,
+          timestamp: t,
+        },
+      ])
+    }
+  }, [user, messages.length])
   const [inputValue, setInputValue] = useState('')
   const [isTyping, setIsTyping] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)

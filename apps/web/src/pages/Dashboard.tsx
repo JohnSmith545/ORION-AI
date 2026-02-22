@@ -1,4 +1,6 @@
 import React, { useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../hooks/useAuth'
 import { DashboardBackground } from '../components/dashboard/DashboardBackground'
 import { DashboardHeader } from '../components/dashboard/DashboardHeader'
 import { DashboardSidebarLeft } from '../components/dashboard/DashboardSidebarLeft'
@@ -13,12 +15,25 @@ import { DashboardFooter } from '../components/dashboard/DashboardFooter'
  * Ensures dark mode is active for the dashboard theme.
  */
 export const Dashboard: React.FC = () => {
+  const { user, loading } = useAuth()
+  const navigate = useNavigate()
+
   useEffect(() => {
     document.documentElement.classList.add('dark')
     return () => {
       document.documentElement.classList.remove('dark')
     }
   }, [])
+
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate('/auth', { replace: true })
+    }
+  }, [user, loading, navigate])
+
+  if (loading || !user) {
+    return null // or a loading spinner
+  }
 
   return (
     <DashboardBackground>
