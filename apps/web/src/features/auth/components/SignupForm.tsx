@@ -90,15 +90,12 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onProgressChange, onLogi
   }
 
   return (
-    <div className="glass-login rounded-2xl p-[clamp(1.25rem,5vw,2rem)] backdrop-blur-xl relative overflow-hidden group">
+    <div className="glass-login rounded-2xl p-6 md:p-8 backdrop-blur-xl relative overflow-hidden group">
       <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-50"></div>
       <div className="absolute -top-20 -right-20 w-40 h-40 bg-primary/10 blur-3xl rounded-full pointer-events-none"></div>
       <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-accent-violet/10 blur-3xl rounded-full pointer-events-none"></div>
 
-      <form
-        onSubmit={handleSignup}
-        className="flex flex-col gap-[clamp(1rem,3vw,1.25rem)] relative z-10"
-      >
+      <form onSubmit={handleSignup} className="flex flex-col gap-4 md:gap-5 relative z-10">
         {error && (
           <div className="p-3 rounded bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-mono">
             {error}
@@ -109,7 +106,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onProgressChange, onLogi
           <button
             onClick={onLoginClick}
             type="button"
-            className="group/back flex items-center gap-2 text-white/40 hover:text-white transition-colors text-[clamp(0.7rem,1.8vw,0.8rem)] font-mono uppercase tracking-widest"
+            className="group/back flex items-center gap-2 text-white/40 hover:text-white transition-colors text-xs md:text-sm font-mono uppercase tracking-widest"
           >
             <span className="material-symbols-outlined text-base group-hover/back:-translate-x-1 transition-transform">
               arrow_back
@@ -120,7 +117,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onProgressChange, onLogi
 
         <div className="space-y-1">
           <label
-            className="text-[clamp(0.75rem,2vw,0.875rem)] font-mono text-white/50 uppercase tracking-wider ml-1"
+            className="text-xs md:text-sm font-mono text-white/50 uppercase tracking-wider ml-1"
             htmlFor="signup-identity"
           >
             Coordinate Identity
@@ -143,7 +140,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onProgressChange, onLogi
 
         <div className="space-y-1">
           <label
-            className="text-[clamp(0.75rem,2vw,0.875rem)] font-mono text-white/50 uppercase tracking-wider ml-1"
+            className="text-xs md:text-sm font-mono text-white/50 uppercase tracking-wider ml-1"
             htmlFor="signup-email"
           >
             Data Link
@@ -166,7 +163,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onProgressChange, onLogi
 
         <div className="space-y-1">
           <label
-            className="text-[clamp(0.75rem,2vw,0.875rem)] font-mono text-white/50 uppercase tracking-wider ml-1"
+            className="text-xs md:text-sm font-mono text-white/50 uppercase tracking-wider ml-1"
             htmlFor="signup-password"
           >
             Security Key
@@ -194,7 +191,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onProgressChange, onLogi
               type="checkbox"
               required
             />
-            <span className="text-[clamp(0.7rem,1.8vw,0.8rem)] text-white/40 group-hover:text-white/60 transition-colors font-light leading-snug">
+            <span className="text-xs md:text-sm text-white/40 group-hover:text-white/60 transition-colors font-light leading-snug">
               I accept the{' '}
               <a
                 href="#"
@@ -256,7 +253,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onProgressChange, onLogi
       </form>
 
       <div className="mt-8 pt-6 border-t border-white/5 flex flex-col items-center gap-4">
-        <p className="text-[clamp(0.7rem,1.8vw,0.8rem)] text-white/30 font-light uppercase tracking-widest">
+        <p className="text-xs md:text-sm text-white/30 font-light uppercase tracking-widest">
           Or register via quantum link
         </p>
         <div className="flex gap-4">

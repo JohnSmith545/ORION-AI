@@ -30,7 +30,7 @@ export const Auth: React.FC = () => {
         subtitle="Astronomical Intelligence"
         progress={progress}
         footer={
-          <p className="text-[clamp(0.75rem,2vw,0.875rem)] text-white/30 font-light tracking-widest uppercase font-mono">
+          <p className="text-xs md:text-sm text-white/30 font-light tracking-widest uppercase font-mono">
             {isLogin ? (
               <>
                 New to the network?{' '}

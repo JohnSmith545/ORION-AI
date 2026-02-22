@@ -1,4 +1,4 @@
-import { publicProcedure, router } from '../trpc.js'
+import { publicProcedure, adminProcedure, router } from '../trpc.js'
 import { ChatQuerySchema, IngestDocSchema } from '@repo/shared'
 import { getQueryEmbedding, retrieveContext } from '../../lib/rag.js'
 import { generateGroundedResponse } from '../../lib/gemini.js'
@@ -37,7 +37,7 @@ export const ragRouter = router({
   /**
    * Trigger document ingestion.
    */
-  ingest: publicProcedure.input(IngestDocSchema).mutation(async ({ input }) => {
+  ingest: adminProcedure.input(IngestDocSchema).mutation(async ({ input }) => {
     const { sourceUri, title, sourceType } = input
     const docId = await ingestDocument(sourceUri, title || 'Untitled Document', sourceType)
 

@@ -88,10 +88,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onProgressChange }) => {
       <div className="absolute -top-20 -right-20 w-40 h-40 bg-primary/10 blur-3xl rounded-full pointer-events-none"></div>
       <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-accent-violet/10 blur-3xl rounded-full pointer-events-none"></div>
 
-      <form
-        onSubmit={handleLogin}
-        className="flex flex-col gap-[clamp(1rem,3vw,1.25rem)] relative z-10"
-      >
+      <form onSubmit={handleLogin} className="flex flex-col gap-4 md:gap-5 relative z-10">
         {error && (
           <div className="p-3 rounded bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-mono">
             {error}
@@ -100,7 +97,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onProgressChange }) => {
 
         <div className="space-y-1">
           <label
-            className="text-[clamp(0.75rem,2vw,0.875rem)] font-mono text-white/50 uppercase tracking-wider ml-1"
+            className="text-xs md:text-sm font-mono text-white/50 uppercase tracking-wider ml-1"
             htmlFor="identity"
           >
             Identity
@@ -123,7 +120,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onProgressChange }) => {
 
         <div className="space-y-1">
           <label
-            className="text-[clamp(0.75rem,2vw,0.875rem)] font-mono text-white/50 uppercase tracking-wider ml-1"
+            className="text-xs md:text-sm font-mono text-white/50 uppercase tracking-wider ml-1"
             htmlFor="password"
           >
             Security Key
@@ -156,12 +153,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onProgressChange }) => {
               className="w-3.5 h-3.5 rounded border-white/20 bg-white/5 text-primary focus:ring-offset-0 focus:ring-primary/50 transition-all checked:bg-primary"
               type="checkbox"
             />
-            <span className="text-[clamp(0.7rem,1.8vw,0.8rem)] text-white/40 group-hover:text-white/60 transition-colors font-light">
+            <span className="text-xs md:text-sm text-white/40 group-hover:text-white/60 transition-colors font-light">
               Keep session active
             </span>
           </label>
           <a
-            className="text-[clamp(0.7rem,1.8vw,0.8rem)] text-primary/70 hover:text-primary transition-colors font-light tracking-wide hover:shadow-[0_0_8px_rgba(0,242,255,0.4)]"
+            className="text-xs md:text-sm text-primary/70 hover:text-primary transition-colors font-light tracking-wide hover:shadow-[0_0_8px_rgba(0,242,255,0.4)]"
             href="#"
           >
             Recover Access?
@@ -210,7 +207,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onProgressChange }) => {
       </form>
 
       <div className="mt-8 pt-6 border-t border-white/5 flex flex-col items-center gap-4">
-        <p className="text-[clamp(0.7rem,1.8vw,0.8rem)] text-white/30 font-light uppercase tracking-widest">
+        <p className="text-xs md:text-sm text-white/30 font-light uppercase tracking-widest">
           Or authenticate via quantum link
         </p>
         <div className="flex gap-4">

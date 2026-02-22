@@ -22,7 +22,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
   const glowShadow = `0 0 ${20 + progress * 60}px rgba(${progress > 0.5 ? '139, 92, 246' : '0, 242, 255'}, ${0.1 + progress * 0.4})`
   return (
     <>
-      <div className="text-center mb-[clamp(2rem,6vh,3rem)] relative">
+      <div className="text-center mb-8 md:mb-12 relative">
         <div className="inline-flex items-center justify-center mb-2 relative">
           <span className="material-symbols-outlined text-6xl font-thin relative z-10 drop-shadow-[0_0_15px_rgba(0,242,255,0.6)] text-primary">
             blur_on
