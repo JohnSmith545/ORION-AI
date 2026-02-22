@@ -2,7 +2,7 @@ import React from 'react'
 
 export const DashboardSidebarRight: React.FC = () => {
   return (
-    <aside className="glass-panel rounded-xl flex flex-col py-6 px-4 relative shadow-panel-glow">
+    <aside className="hidden lg:flex w-[220px] shrink-0 h-full glass-panel rounded-xl flex-col py-6 px-4 relative shadow-panel-glow">
       <div className="space-y-8">
         <div>
           <h3 className="text-[10px] font-mono uppercase tracking-[0.2em] text-white/50 mb-4 flex items-center gap-2 justify-end border-b border-white/10 pb-2">

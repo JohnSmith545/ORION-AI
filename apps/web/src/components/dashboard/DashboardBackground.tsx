@@ -97,8 +97,8 @@ export const DashboardBackground: React.FC<DashboardBackgroundProps> = ({ childr
   return (
     <>
       {typeof document !== 'undefined' && createPortal(backgroundNode, document.body)}
-      <div className="font-body text-white/80 h-screen w-full overflow-hidden relative flex flex-col min-h-screen">
-        <div className="relative z-10 flex flex-1 flex-col w-full">{children}</div>
+      <div className="font-body text-white/80 h-[100dvh] w-full overflow-hidden relative flex flex-col">
+        {children}
       </div>
     </>
   )

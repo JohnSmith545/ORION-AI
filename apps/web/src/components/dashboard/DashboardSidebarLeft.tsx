@@ -25,7 +25,7 @@ export const DashboardSidebarLeft: React.FC = () => {
   }
 
   return (
-    <aside className="glass-panel rounded-xl flex flex-col justify-between py-6 px-4 relative overflow-hidden shadow-panel-glow">
+    <aside className="hidden lg:flex w-[220px] shrink-0 h-full glass-panel rounded-xl flex-col justify-between py-6 px-4 relative overflow-hidden shadow-panel-glow">
       <div className="space-y-8">
         <div>
           <h3 className="text-[10px] font-mono uppercase tracking-[0.2em] text-primary/80 mb-4 flex items-center gap-2 border-b border-primary/20 pb-2">

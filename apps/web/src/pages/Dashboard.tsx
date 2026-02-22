@@ -38,7 +38,7 @@ export const Dashboard: React.FC = () => {
   return (
     <DashboardBackground>
       <DashboardHeader />
-      <main className="flex-1 w-full max-w-[1600px] mx-auto grid grid-cols-[260px_1fr_260px] relative z-10 overflow-hidden pb-12 pt-4 gap-6 px-6">
+      <main className="flex-1 min-h-0 w-full max-w-6xl mx-auto flex flex-col lg:flex-row gap-4 px-4 pb-4 overflow-hidden relative z-10">
         <DashboardSidebarLeft />
         <DashboardChatSection />
         <DashboardSidebarRight />

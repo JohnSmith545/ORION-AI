@@ -83,7 +83,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onProgressChange }) => {
   }
 
   return (
-    <div className="glass-login rounded-2xl p-[clamp(1.25rem,5vw,2rem)] backdrop-blur-xl relative overflow-hidden group">
+    <div className="glass-login rounded-2xl p-6 sm:p-8 backdrop-blur-xl relative overflow-hidden group">
       <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-50"></div>
       <div className="absolute -top-20 -right-20 w-40 h-40 bg-primary/10 blur-3xl rounded-full pointer-events-none"></div>
       <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-accent-violet/10 blur-3xl rounded-full pointer-events-none"></div>
