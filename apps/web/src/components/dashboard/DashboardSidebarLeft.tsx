@@ -2,6 +2,14 @@ import React, { useState } from 'react'
 import { trpc } from '../../lib/trpc'
 import { useAuth } from '../../hooks/useAuth'
 
+// ── Props ─────────────────────────────────────────────────────────────
+
+interface DashboardSidebarLeftProps {
+  activeSessionId: string | null
+  onSelectSession: (sessionId: string) => void
+  onNewChat: () => void
+}
+
 // ── Helpers ────────────────────────────────────────────────────────────
 
 /** Group chat sessions into "Today", "Yesterday", and "Earlier". */
@@ -129,7 +137,17 @@ const AdminIngestPanel: React.FC = () => {
 
 // ── User: Chat History Panel ───────────────────────────────────────────
 
-const ChatHistoryPanel: React.FC = () => {
+interface ChatHistoryPanelProps {
+  activeSessionId: string | null
+  onSelectSession: (sessionId: string) => void
+  onNewChat: () => void
+}
+
+const ChatHistoryPanel: React.FC<ChatHistoryPanelProps> = ({
+  activeSessionId,
+  onSelectSession,
+  onNewChat,
+}) => {
   const { data: sessions, isLoading } = trpc.user.getChatHistory.useQuery()
 
   const grouped = sessions ? groupByDate(sessions) : []
@@ -144,7 +162,7 @@ const ChatHistoryPanel: React.FC = () => {
       {/* New Chat button */}
       <button
         className="w-full mb-4 py-2 px-3 text-[10px] font-mono uppercase tracking-wider bg-primary/10 border border-primary/30 text-primary rounded-lg hover:bg-primary/20 hover:border-primary/50 transition-all flex items-center justify-center gap-2 group"
-        onClick={() => window.location.reload()}
+        onClick={onNewChat}
       >
         <span className="material-symbols-outlined text-sm group-hover:rotate-90 transition-transform duration-300">
           add
@@ -185,19 +203,31 @@ const ChatHistoryPanel: React.FC = () => {
               {group.label}
             </div>
             <ul className="space-y-1">
-              {group.items.map(session => (
-                <li
-                  key={session.id}
-                  className="group cursor-pointer p-2 rounded-lg hover:bg-white/5 transition-all duration-300 border border-transparent hover:border-white/10"
-                >
-                  <div className="text-xs text-white/80 font-medium group-hover:text-primary transition-colors truncate">
-                    {session.title}
-                  </div>
-                  <div className="text-[9px] text-white/30 mt-0.5 font-mono">
-                    {relativeTime(session.updatedAt)}
-                  </div>
-                </li>
-              ))}
+              {group.items.map(session => {
+                const isActive = session.id === activeSessionId
+                return (
+                  <li
+                    key={session.id}
+                    onClick={() => onSelectSession(session.id)}
+                    className={`group cursor-pointer p-2 rounded-lg transition-all duration-300 border ${
+                      isActive
+                        ? 'bg-primary/10 border-primary/30'
+                        : 'border-transparent hover:bg-white/5 hover:border-white/10'
+                    }`}
+                  >
+                    <div
+                      className={`text-xs font-medium transition-colors truncate ${
+                        isActive ? 'text-primary' : 'text-white/80 group-hover:text-primary'
+                      }`}
+                    >
+                      {session.title}
+                    </div>
+                    <div className="text-[9px] text-white/30 mt-0.5 font-mono">
+                      {relativeTime(session.updatedAt)}
+                    </div>
+                  </li>
+                )
+              })}
             </ul>
           </div>
         ))}
@@ -208,14 +238,26 @@ const ChatHistoryPanel: React.FC = () => {
 
 // ── Main Sidebar Component ─────────────────────────────────────────────
 
-export const DashboardSidebarLeft: React.FC = () => {
+export const DashboardSidebarLeft: React.FC<DashboardSidebarLeftProps> = ({
+  activeSessionId,
+  onSelectSession,
+  onNewChat,
+}) => {
   const { role } = useAuth()
 
   return (
     <aside className="hidden lg:flex w-[220px] shrink-0 h-full glass-panel rounded-xl flex-col justify-between py-6 px-4 relative overflow-hidden shadow-panel-glow">
       <div className="space-y-8">
         {/* Role-based primary section */}
-        {role === 'admin' ? <AdminIngestPanel /> : <ChatHistoryPanel />}
+        {role === 'admin' ? (
+          <AdminIngestPanel />
+        ) : (
+          <ChatHistoryPanel
+            activeSessionId={activeSessionId}
+            onSelectSession={onSelectSession}
+            onNewChat={onNewChat}
+          />
+        )}
 
         <div>
           <h3 className="text-[10px] font-mono uppercase tracking-[0.2em] text-primary/80 mb-4 flex items-center gap-2 border-b border-primary/20 pb-2">

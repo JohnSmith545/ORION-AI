@@ -11,6 +11,11 @@ export interface ChatMessage {
   citations?: string[]
 }
 
+interface DashboardChatSectionProps {
+  activeSessionId: string | null
+  onSessionCreated: (sessionId: string) => void
+}
+
 function formatTime() {
   const d = new Date()
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
@@ -88,13 +93,63 @@ function renderMarkdown(text: string): React.ReactNode[] {
   return elements
 }
 
-export const DashboardChatSection: React.FC = () => {
+export const DashboardChatSection: React.FC<DashboardChatSectionProps> = ({
+  activeSessionId,
+  onSessionCreated,
+}) => {
   const { user } = useAuth()
   const chatMutation = trpcApi.rag.chat.useMutation()
-  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const createSessionMutation = trpcApi.user.createSession.useMutation()
+  const addMessagesMutation = trpcApi.user.addMessages.useMutation()
+  const utils = trpcApi.useUtils()
 
+  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [inputValue, setInputValue] = useState('')
+  const [isTyping, setIsTyping] = useState(false)
+  const scrollRef = useRef<HTMLDivElement>(null)
+
+  // Load session messages when activeSessionId changes
+  const { data: sessionData } = trpcApi.user.getSession.useQuery(
+    { sessionId: activeSessionId! },
+    { enabled: !!activeSessionId }
+  )
+
+  // When session data loads or activeSessionId changes, update messages
   useEffect(() => {
-    if (messages.length === 0 && user) {
+    if (activeSessionId && sessionData) {
+      setMessages(
+        sessionData.messages.map(
+          (
+            m: { role: string; content: string; citations?: string[]; timestamp?: string },
+            i: number
+          ) => ({
+            id: `loaded-${i}`,
+            role: m.role as 'user' | 'assistant',
+            content: m.content,
+            citations: m.citations?.length ? m.citations : undefined,
+            timestamp: m.timestamp
+              ? new Date(m.timestamp).toLocaleTimeString([], {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  hour12: false,
+                })
+              : undefined,
+          })
+        )
+      )
+    }
+  }, [activeSessionId, sessionData])
+
+  // Reset to welcome message when starting a new chat (activeSessionId becomes null)
+  useEffect(() => {
+    if (!activeSessionId) {
+      setMessages([])
+    }
+  }, [activeSessionId])
+
+  // Show welcome message when messages are empty
+  useEffect(() => {
+    if (messages.length === 0 && user && !activeSessionId) {
       const t = formatTime()
       const userName = user.displayName || user.email?.split('@')[0] || 'Operative'
       setMessages([
@@ -106,10 +161,7 @@ export const DashboardChatSection: React.FC = () => {
         },
       ])
     }
-  }, [user, messages.length])
-  const [inputValue, setInputValue] = useState('')
-  const [isTyping, setIsTyping] = useState(false)
-  const scrollRef = useRef<HTMLDivElement>(null)
+  }, [user, messages.length, activeSessionId])
 
   useEffect(() => {
     scrollRef.current?.scrollTo({
@@ -134,7 +186,9 @@ export const DashboardChatSection: React.FC = () => {
     setInputValue('')
     setIsTyping(true)
 
-    const history = messages.map(m => ({
+    // Build history from non-welcome messages for Gemini context
+    const realMessages = messages.filter(m => m.id !== 'ai-initial')
+    const history = realMessages.map(m => ({
       role: (m.role === 'assistant' ? 'model' : 'user') as 'user' | 'model',
       text: m.content,
     }))
@@ -144,16 +198,45 @@ export const DashboardChatSection: React.FC = () => {
         question: trimmed,
         history: history.length > 0 ? history : undefined,
       })
-      setMessages(prev => [
-        ...prev,
+
+      const aiMsg: ChatMessage = {
+        id: `ai-${Date.now()}`,
+        role: 'assistant',
+        content: result.response,
+        timestamp: formatTime(),
+        citations: result.citations?.length ? result.citations : undefined,
+      }
+      setMessages(prev => [...prev, aiMsg])
+
+      // Persist to Firestore in the background
+      const messagesToSave = [
+        { role: 'user' as const, content: trimmed },
         {
-          id: `ai-${Date.now()}`,
-          role: 'assistant',
+          role: 'assistant' as const,
           content: result.response,
-          timestamp: formatTime(),
           citations: result.citations?.length ? result.citations : undefined,
         },
-      ])
+      ]
+
+      if (activeSessionId) {
+        // Append to existing session
+        addMessagesMutation.mutate(
+          { sessionId: activeSessionId, messages: messagesToSave },
+          { onSuccess: () => utils.user.getChatHistory.invalidate() }
+        )
+      } else {
+        // Create a new session — use the first user message as the title
+        const title = trimmed.length > 60 ? trimmed.slice(0, 57) + '...' : trimmed
+        createSessionMutation.mutate(
+          { title, messages: messagesToSave },
+          {
+            onSuccess: data => {
+              onSessionCreated(data.sessionId)
+              utils.user.getChatHistory.invalidate()
+            },
+          }
+        )
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Request failed. Try again.'
       setMessages(prev => [

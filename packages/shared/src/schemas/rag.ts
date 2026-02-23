@@ -41,3 +41,33 @@ export const IngestDocSchema = z
 export type ChatQuery = z.infer<typeof ChatQuerySchema>
 export type ChatResponse = z.infer<typeof ChatResponseSchema>
 export type IngestDoc = z.infer<typeof IngestDocSchema>
+
+// ── Chat Session Schemas ──────────────────────────────────────────────
+
+export const SessionMessageSchema = z.object({
+  role: z.enum(['user', 'assistant']),
+  content: z.string(),
+  citations: z.array(z.string()).optional(),
+})
+
+export const CreateSessionSchema = z.object({
+  title: z.string().min(1).max(200),
+  messages: z.array(SessionMessageSchema).min(1),
+})
+
+export const AddMessagesSchema = z.object({
+  sessionId: z.string().min(1),
+  messages: z.array(SessionMessageSchema).min(1),
+})
+
+export const GetSessionSchema = z.object({
+  sessionId: z.string().min(1),
+})
+
+export const DeleteSessionSchema = z.object({
+  sessionId: z.string().min(1),
+})
+
+export type SessionMessage = z.infer<typeof SessionMessageSchema>
+export type CreateSession = z.infer<typeof CreateSessionSchema>
+export type AddMessages = z.infer<typeof AddMessagesSchema>
