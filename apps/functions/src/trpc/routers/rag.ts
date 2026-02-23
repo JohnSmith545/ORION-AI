@@ -44,6 +44,7 @@ export const ragRouter = router({
     return {
       success: true,
       docId,
+      message: `Document ingested successfully (${docId})`,
     }
   }),
 })

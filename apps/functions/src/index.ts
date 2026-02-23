@@ -1,5 +1,6 @@
 import type { Express } from 'express'
 import { onRequest } from 'firebase-functions/v2/https'
+import { onObjectFinalized } from 'firebase-functions/v2/storage'
 
 let cachedApp: Express | null = null
 
@@ -66,3 +67,57 @@ export const api = onRequest({ maxInstances: 10 }, async (req, res) => {
   // Pass the request and response to the cached Express app
   return cachedApp(req, res)
 })
+
+// ── Background Trigger ─────────────────────────────────────────────────
+// Fires when a new object is finalized (uploaded) in the default GCS bucket.
+// Only processes `.txt` files — all others are silently skipped.
+export const processUploadedDocument = onObjectFinalized(
+  { bucket: 'orion-ai-knowledge-base' },
+  async event => {
+    const filePath = event.data.name
+    if (!filePath || !filePath.endsWith('.txt')) {
+      console.log(`Skipping non-.txt file: ${filePath ?? '(no name)'}`)
+      return
+    }
+
+    const fileName = filePath.split('/').pop() ?? filePath
+    console.log(`Starting ingestion for ${fileName}`)
+
+    // Lazy-load heavy dependencies (same pattern as the api function)
+    const [
+      { initializeApp, getApps },
+      { getStorage },
+      { chunkText, saveToFirestore },
+      { embedTexts },
+    ] = await Promise.all([
+      import('firebase-admin/app'),
+      import('firebase-admin/storage'),
+      import('./lib/ingest.js'),
+      import('./lib/gemini.js'),
+    ])
+
+    if (getApps().length === 0) {
+      initializeApp()
+    }
+
+    // 1. Download file contents from GCS
+    const bucket = getStorage().bucket(event.data.bucket)
+    const [contents] = await bucket.file(filePath).download()
+    const text = contents.toString('utf-8')
+    console.log(`Downloaded ${fileName} (${text.length} characters)`)
+
+    // 2. Chunk
+    const chunks = chunkText(text, 1000, 200)
+    console.log(`Chunked ${fileName} into ${chunks.length} chunks`)
+
+    // 3. Embed (batched internally at 100 per request)
+    const embeddings = await embedTexts(chunks)
+
+    // 4. Save to Firestore (batched internally at 450 per WriteBatch)
+    const docId = `doc_${Date.now()}`
+    const title = fileName.replace(/\.txt$/, '')
+    await saveToFirestore(docId, title, `gs://${event.data.bucket}/${filePath}`, chunks, embeddings)
+
+    console.log(`Successfully processed ${chunks.length} chunks for ${fileName} (docId: ${docId})`)
+  }
+)
