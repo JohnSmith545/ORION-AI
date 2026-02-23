@@ -149,6 +149,26 @@ const ChatHistoryPanel: React.FC<ChatHistoryPanelProps> = ({
   onNewChat,
 }) => {
   const { data: sessions, isLoading } = trpc.user.getChatHistory.useQuery()
+  const deleteSessionMutation = trpc.user.deleteSession.useMutation()
+  const utils = trpc.useUtils()
+
+  const [sessionToDelete, setSessionToDelete] = useState<string | null>(null)
+
+  const confirmDelete = async () => {
+    if (!sessionToDelete) return
+    const id = sessionToDelete
+    await deleteSessionMutation.mutateAsync({ sessionId: id })
+    utils.user.getChatHistory.invalidate()
+    if (activeSessionId === id) {
+      onNewChat()
+    }
+    setSessionToDelete(null)
+  }
+
+  const handleDeleteClick = (e: React.MouseEvent, sessionId: string) => {
+    e.stopPropagation()
+    setSessionToDelete(sessionId)
+  }
 
   const grouped = sessions ? groupByDate(sessions) : []
 
@@ -209,22 +229,32 @@ const ChatHistoryPanel: React.FC<ChatHistoryPanelProps> = ({
                   <li
                     key={session.id}
                     onClick={() => onSelectSession(session.id)}
-                    className={`group cursor-pointer p-2 rounded-lg transition-all duration-300 border ${
+                    className={`group cursor-pointer p-2 rounded-lg transition-all duration-300 border flex items-center justify-between gap-2 ${
                       isActive
                         ? 'bg-primary/10 border-primary/30'
                         : 'border-transparent hover:bg-white/5 hover:border-white/10'
                     }`}
                   >
-                    <div
-                      className={`text-xs font-medium transition-colors truncate ${
-                        isActive ? 'text-primary' : 'text-white/80 group-hover:text-primary'
-                      }`}
+                    <div className="flex-1 min-w-0">
+                      <div
+                        className={`text-xs font-medium transition-colors truncate ${
+                          isActive ? 'text-primary' : 'text-white/80 group-hover:text-primary'
+                        }`}
+                      >
+                        {session.title}
+                      </div>
+                      <div className="text-[9px] text-white/30 mt-0.5 font-mono">
+                        {relativeTime(session.updatedAt)}
+                      </div>
+                    </div>
+                    <button
+                      onClick={e => handleDeleteClick(e, session.id)}
+                      disabled={deleteSessionMutation.isPending}
+                      className="opacity-0 group-hover:opacity-100 p-1 text-white/40 hover:text-red-400 transition-colors rounded disabled:opacity-50"
+                      title="Delete chat"
                     >
-                      {session.title}
-                    </div>
-                    <div className="text-[9px] text-white/30 mt-0.5 font-mono">
-                      {relativeTime(session.updatedAt)}
-                    </div>
+                      <span className="material-symbols-outlined text-[14px]">delete</span>
+                    </button>
                   </li>
                 )
               })}
@@ -232,6 +262,34 @@ const ChatHistoryPanel: React.FC<ChatHistoryPanelProps> = ({
           </div>
         ))}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {sessionToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-background-dark border border-white/10 rounded-xl p-6 max-w-sm w-full shadow-2xl">
+            <h4 className="text-white text-sm font-medium mb-2">Delete Chat History</h4>
+            <p className="text-white/60 text-xs mb-6">
+              Are you sure you want to delete this conversation? This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setSessionToDelete(null)}
+                className="px-4 py-2 text-xs font-mono text-white/70 hover:text-white transition-colors"
+                disabled={deleteSessionMutation.isPending}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                disabled={deleteSessionMutation.isPending}
+                className="px-4 py-2 text-xs font-mono bg-red-500/20 text-red-400 border border-red-500/30 rounded hover:bg-red-500/30 transition-colors disabled:opacity-50"
+              >
+                {deleteSessionMutation.isPending ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
