@@ -1,15 +1,56 @@
-// Firebase Functions entry point (stub)
-// This file serves as the entry point for Firebase Cloud Functions
-// In production, this would be deployed to Firebase
+import type { Express } from 'express'
+import { onRequest } from 'firebase-functions/v2/https'
 
-export { appRouter, type AppRouter } from './trpc/router'
+let cachedApp: Express | null = null
 
-// Stub: When deploying to Firebase, you would use:
-// import * as functions from 'firebase-functions'
-// import { createHTTPHandler } from '@trpc/server/adapters/standalone'
-//
-// export const api = functions.https.onRequest(
-//   createHTTPHandler({ router: appRouter })
-// )
+// Export the Firebase function
+export const api = onRequest({ maxInstances: 10 }, async (req, res) => {
+  if (!cachedApp) {
+    const [
+      { initializeApp, getApps },
+      { default: express },
+      { default: cors },
+      trpcExpress,
+      { appRouter },
+    ] = await Promise.all([
+      import('firebase-admin/app'),
+      import('express'),
+      import('cors'),
+      import('@trpc/server/adapters/express'),
+      import('./trpc/router.js'),
+    ])
 
-console.log('Functions entry point loaded (stub mode)')
+    // Initialize Firebase Admin if not already initialized
+    if (getApps().length === 0) {
+      initializeApp()
+    }
+
+    const app = express()
+
+    // Apply CORS with explicit settings to force preflight success
+    app.use(
+      cors({
+        origin: true, // Echoes the request origin
+        credentials: true,
+        methods: ['GET', 'POST', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-TRPC-Source'],
+      })
+    )
+
+    // Mount tRPC middleware at the root
+    app.use(
+      '/',
+      trpcExpress.createExpressMiddleware({
+        router: appRouter,
+        onError: ({ error, path }) => {
+          console.error(`tRPC Error on [${path}]:`, error)
+        },
+      })
+    )
+
+    cachedApp = app
+  }
+
+  // Pass the request and response to the cached Express app
+  return cachedApp(req, res)
+})

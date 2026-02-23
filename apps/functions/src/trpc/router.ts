@@ -1,4 +1,4 @@
-import { router } from './trpc'
+import { router } from './trpc.js'
 import { userRouter } from './routers/user.js'
 import { ragRouter } from './routers/rag.js'
 

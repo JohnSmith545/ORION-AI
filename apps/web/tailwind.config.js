@@ -55,12 +55,17 @@ export default {
       boxShadow: {
         glow: '0 0 20px rgba(0, 242, 255, 0.2)',
         'glow-strong': '0 0 40px rgba(0, 242, 255, 0.4)',
+        'panel-glow':
+          '0 0 15px rgba(0, 242, 255, 0.05), inset 0 0 20px rgba(0, 242, 255, 0.02)',
+        'card-inner': 'inset 0 0 10px rgba(255, 255, 255, 0.05)',
       },
       animation: {
         'spin-slow': 'spin 60s linear infinite',
         'spin-reverse-slow': 'spin-reverse 80s linear infinite',
         'pulse-slow': 'pulse 6s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         float: 'float 10s ease-in-out infinite',
+        typing: 'typing 2s steps(40, end)',
+        'blink-caret': 'blink-caret 0.75s step-end infinite',
       },
       keyframes: {
         'spin-reverse': {
@@ -70,6 +75,14 @@ export default {
         float: {
           '0%, 100%': { transform: 'translateY(0)' },
           '50%': { transform: 'translateY(-10px)' },
+        },
+        typing: {
+          from: { width: '0' },
+          to: { width: '100%' },
+        },
+        'blink-caret': {
+          'from, to': { borderColor: 'transparent' },
+          '50%': { borderColor: '#00f2ff' },
         },
       },
       borderRadius: {
