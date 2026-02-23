@@ -38,23 +38,21 @@ export const api = onRequest({ maxInstances: 10 }, async (req, res) => {
     )
 
     // Mount tRPC middleware at the root
+    const { getAuth } = await import('firebase-admin/auth')
     app.use(
       '/',
       trpcExpress.createExpressMiddleware({
         router: appRouter,
         createContext: async ({ req }) => {
-          const authHeader = req.headers.authorization
-          if (authHeader && authHeader.startsWith('Bearer ')) {
-            const token = authHeader.split('Bearer ')[1]
-            try {
-              const { getAuth } = await import('firebase-admin/auth')
-              const decodedToken = await getAuth().verifyIdToken(token)
-              return { uid: decodedToken.uid }
-            } catch (error) {
-              console.error('Invalid Firebase token:', error)
-            }
+          const token = req.headers.authorization?.replace('Bearer ', '')
+          if (!token) return {}
+          try {
+            const decodedToken = await getAuth().verifyIdToken(token)
+            return { uid: decodedToken.uid }
+          } catch (error) {
+            console.error('Invalid Firebase token:', error)
+            return {}
           }
-          return {} // Return empty context if not logged in
         },
         onError: ({ error, path }) => {
           console.error(`tRPC Error on [${path}]:`, error)

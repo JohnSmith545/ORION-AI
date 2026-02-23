@@ -21,8 +21,8 @@ export const ragRouter = router({
       // 2. Search your database for the context chunks
       const context = await retrieveContext(vector, 3)
 
-      // 3. Send to Gemini
-      const response = await generateGroundedResponse(question, context)
+      // 3. Send to Gemini with conversation history for multi-turn context
+      const response = await generateGroundedResponse(question, context, input.history)
 
       // 4. Return exactly what DashboardChatSection expects
       return {

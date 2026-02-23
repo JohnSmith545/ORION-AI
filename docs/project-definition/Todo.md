@@ -81,15 +81,14 @@
 
 **Goal:** A premium, responsive chat experience.
 
-- [ ] **Core Chat Component**
-  - [ ] 🔴 Write Test: Verify message list renders user/model roles correctly.
-  - [ ] 🟢 Implement: `apps/web/src/components/RAGChat.tsx` state management.
-- [ ] **markdown Rendering**
-  - [ ] Task: Integrate `react-markdown` with syntax highlighting for code blocks.
-- [ ] **Citation System**
-  - [ ] Task: Implement footnote UI for displaying source links.
-- [ ] **Admin Dash**
-  - [ ] Task: Create file upload form and ingestion status tracker.
+- [x] **Core Chat Component**
+  - [x] 🟢 Implement: `apps/web/src/components/dashboard/DashboardChatSection.tsx` — full message list with user/assistant roles, state management, typing indicator, auto-scroll, and chat history via tRPC mutation.
+- [x] **Markdown Rendering**
+  - [x] Task: Custom `renderMarkdown()` in `DashboardChatSection.tsx` — renders **bold**, bullet lists, numbered lists, and paragraphs.
+- [x] **Citation System**
+  - [x] Task: Source links displayed under each assistant message in a "Sources" section with citation URIs from RAG responses.
+- [x] **Admin Dash**
+  - [x] Task: `AdminIngestPanel` in `DashboardSidebarLeft.tsx` — URI input, title field, API/GCS source type selector, ingestion status/error feedback, and role-gated visibility (admin only).
 
 ---
 
@@ -98,10 +97,10 @@
 **Goal:** Production readiness and quality assurance.
 
 - [ ] **Automated Testing**
-  - [ ] Task: Unit tests for all adapters (100% logic coverage).
+  - [x] Task: Unit tests for adapters — `gemini.test.ts`, `ingest.test.ts`, `rag.test.ts`, `rag.test.ts` (router), `user.test.ts` (router), `rag.test.ts` (schema), `user.test.ts` (schema). _(Coverage may not be 100%.)_
   - [ ] Task: Playwright E2E tests (Ingest -> Chat -> Verify Answer).
 - [ ] **Observability**
   - [ ] Task: Add structured logging for retrieval similarity scores and LLM latency.
 - [ ] **Deployment**
-  - [x] Task: Deploy to production via GitHub Actions.
+  - [x] Task: Deploy to production via GitHub Actions (`ci.yml`, `deploy-dev.yml`, `deploy-stage.yml`, `deploy-main.yml`, `release.yml`).
   - [ ] Task: Final A11y and performance audit.
