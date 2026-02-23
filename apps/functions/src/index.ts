@@ -47,10 +47,10 @@ export const api = onRequest({ maxInstances: 10 }, async (req, res) => {
           const token = req.headers.authorization?.replace('Bearer ', '')
           if (!token) return {}
           try {
-            const decodedToken = await getAuth().verifyIdToken(token)
-            return { uid: decodedToken.uid }
-          } catch (error) {
-            console.error('Invalid Firebase token:', error)
+            const decoded = await getAuth().verifyIdToken(token)
+            return { uid: decoded.uid }
+          } catch (e) {
+            console.error('Token verification error:', e)
             return {}
           }
         },
