@@ -49,7 +49,8 @@ export const api = onRequest({ maxInstances: 10 }, async (req, res) => {
           try {
             const decoded = await getAuth().verifyIdToken(token)
             return { uid: decoded.uid }
-          } catch {
+          } catch (e) {
+            console.error('Token verification error:', e)
             return {}
           }
         },
