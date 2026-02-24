@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { trpc } from '../../lib/trpc'
 import { useAuth } from '../../hooks/useAuth'
 
@@ -264,32 +265,40 @@ const ChatHistoryPanel: React.FC<ChatHistoryPanelProps> = ({
       </div>
 
       {/* Delete Confirmation Modal */}
-      {sessionToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-background-dark border border-white/10 rounded-xl p-6 max-w-sm w-full shadow-2xl">
-            <h4 className="text-white text-sm font-medium mb-2">Delete Chat History</h4>
-            <p className="text-white/60 text-xs mb-6">
-              Are you sure you want to delete this conversation? This action cannot be undone.
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setSessionToDelete(null)}
-                className="px-4 py-2 text-xs font-mono text-white/70 hover:text-white transition-colors"
-                disabled={deleteSessionMutation.isPending}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmDelete}
-                disabled={deleteSessionMutation.isPending}
-                className="px-4 py-2 text-xs font-mono bg-red-500/20 text-red-400 border border-red-500/30 rounded hover:bg-red-500/30 transition-colors disabled:opacity-50"
-              >
-                {deleteSessionMutation.isPending ? 'Deleting...' : 'Delete'}
-              </button>
+      {sessionToDelete &&
+        createPortal(
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <div className="bg-background-dark border border-white/10 rounded-xl p-6 max-w-sm w-full shadow-2xl overflow-hidden">
+              <h4 className="text-white text-sm font-medium mb-2">Delete Chat History</h4>
+              <p className="text-white/60 text-xs mb-6">
+                Are you sure you want to delete this conversation? This action cannot be undone.
+              </p>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setSessionToDelete(null)}
+                  className="px-4 py-2 text-xs font-mono text-white/70 hover:text-white transition-colors"
+                  disabled={deleteSessionMutation.isPending}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  disabled={deleteSessionMutation.isPending}
+                  className="px-4 py-2 text-xs font-mono bg-red-500/20 text-red-400 border border-red-500/30 rounded hover:bg-red-500/30 transition-colors disabled:opacity-50"
+                >
+                  {deleteSessionMutation.isPending ? (
+                    <span className="material-symbols-outlined text-sm animate-spin">
+                      progress_activity
+                    </span>
+                  ) : (
+                    'Delete'
+                  )}
+                </button>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
     </div>
   )
 }
