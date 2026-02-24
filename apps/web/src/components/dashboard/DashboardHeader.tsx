@@ -17,20 +17,25 @@ export const DashboardHeader: React.FC = () => {
   }, [])
 
   return (
-    <header className="w-full h-20 flex items-center justify-center relative z-20 pt-6">
-      <div className="text-center group cursor-pointer">
+    <header className="w-full flex items-center justify-between lg:justify-center px-4 lg:px-8 relative z-20 pt-4 lg:pt-6 h-16 lg:h-20">
+      {/* LOGO (Horizontal on mobile, stacked and centered on desktop) */}
+      <div className="flex items-center gap-2 lg:flex-col lg:gap-0 lg:text-center group cursor-pointer">
         <div className="inline-flex items-center justify-center relative">
-          <span className="material-symbols-outlined text-3xl text-white font-thin relative z-10 drop-shadow-[0_0_15px_rgba(0,242,255,0.6)] group-hover:text-primary transition-colors duration-500">
+          <span className="material-symbols-outlined text-2xl lg:text-3xl text-white font-thin relative z-10 drop-shadow-[0_0_15px_rgba(0,242,255,0.6)] group-hover:text-primary transition-colors duration-500">
             blur_on
           </span>
           <div className="absolute inset-0 bg-primary/20 blur-lg rounded-full opacity-50 group-hover:opacity-100 transition-opacity duration-500" />
         </div>
-        <h1 className="font-display text-xl tracking-[0.3em] font-light text-white drop-shadow-[0_0_10px_rgba(0,242,255,0.5)] mt-1">
+        <h1 className="font-display text-base lg:text-xl tracking-[0.2em] lg:tracking-[0.3em] font-light text-white drop-shadow-[0_0_10px_rgba(0,242,255,0.5)] mt-0 lg:mt-1">
           ORION<span className="font-bold">AI</span>
         </h1>
       </div>
-      <div className="absolute right-8 top-8 flex items-center gap-6">
-        <div className="flex flex-col items-end">
+
+      {/* RIGHT SIDE: SETTINGS & PROFILE */}
+      {/* On mobile, this sits on the right. On desktop, it is absolutely positioned to the top right. */}
+      <div className="flex items-center gap-4 lg:gap-6 lg:absolute lg:right-8 lg:top-8">
+        {/* User Info (Hidden on Mobile) */}
+        <div className="hidden lg:flex flex-col items-end">
           <span className="text-[10px] font-mono text-primary tracking-widest uppercase">
             {user?.displayName || user?.email?.split('@')[0] || 'Unknown Operator'}
           </span>
@@ -42,6 +47,7 @@ export const DashboardHeader: React.FC = () => {
           </div>
         </div>
 
+        {/* Settings Menu (Visible on all screens) */}
         <div className="flex items-center gap-3 relative" ref={dropdownRef}>
           <button
             type="button"
@@ -113,11 +119,6 @@ export const DashboardHeader: React.FC = () => {
             </div>
           )}
         </div>
-      </div>
-      <div className="absolute left-8 top-8">
-        <span className="text-[9px] font-mono text-white/30 tracking-widest uppercase">
-          V.2.0.4 [ALPHA]
-        </span>
       </div>
     </header>
   )
