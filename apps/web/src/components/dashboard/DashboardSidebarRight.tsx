@@ -18,6 +18,24 @@ interface DashboardSidebarRightProps {
 export const DashboardSidebarRight: React.FC<DashboardSidebarRightProps> = ({ targetData }) => {
   const hasTarget = !!targetData
 
+  const is3DObject = targetData?.type
+    ? [
+        'planet',
+        'star',
+        'moon',
+        'satellite',
+        'gas giant',
+        'dwarf',
+        'sun',
+        'terrestrial',
+        'main-sequence',
+        'rocky',
+        'jovian',
+        'ice giant',
+        'exoplanet',
+      ].some(keyword => targetData.type.toLowerCase().includes(keyword))
+    : false
+
   return (
     <aside className="glass-panel rounded-xl flex flex-col py-6 px-4 relative shadow-panel-glow w-full lg:w-[260px] flex-shrink-0 z-10">
       <div className="space-y-6 flex-1">
@@ -36,17 +54,24 @@ export const DashboardSidebarRight: React.FC<DashboardSidebarRightProps> = ({ ta
           <div
             className={`relative h-48 w-48 mx-auto mb-6 mt-4 transition-opacity duration-700 ${hasTarget ? 'opacity-100' : 'opacity-40'}`}
           >
-            {targetData?.imageUrl ? (
+            {targetData?.imageUrl && !is3DObject ? (
               <img
                 src={targetData.imageUrl}
                 alt={targetData.name}
-                onError={e => {
-                  ;(e.target as HTMLImageElement).style.display = 'none'
-                }}
                 className="absolute inset-8 w-[calc(100%-4rem)] h-[calc(100%-4rem)] rounded-full object-cover mix-blend-screen opacity-90 z-10 border border-primary/30 shadow-[0_0_30px_rgba(0,242,255,0.3)]"
+                onError={e => {
+                  e.currentTarget.style.display = 'none'
+                }}
               />
             ) : (
-              <Celestial3DViewer targetType={targetData?.type} targetName={targetData?.name} />
+              <div className="absolute inset-0 z-10 w-full h-full flex items-center justify-center p-4">
+                <div className="w-full h-full rounded-full overflow-hidden">
+                  <Celestial3DViewer
+                    targetType={targetData?.type || 'planet'}
+                    targetName={targetData?.name || ''}
+                  />
+                </div>
+              </div>
             )}
           </div>
 
