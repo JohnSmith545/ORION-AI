@@ -14,9 +14,10 @@ vi.mock('../../lib/rag', () => ({
 }))
 
 vi.mock('../../lib/gemini', () => ({
-  generateGroundedResponse: vi
-    .fn()
-    .mockResolvedValue('ORION AI is a RAG platform powered by Vertex AI. [Source 1]'),
+  generateGroundedResponse: vi.fn().mockResolvedValue({
+    text: 'ORION AI is a RAG platform powered by Vertex AI. [Source 1]',
+    telemetry: null,
+  }),
   embedTexts: vi.fn(),
 }))
 
@@ -41,6 +42,7 @@ describe('ragRouter', () => {
         'https://docs.orion.ai/overview',
         'https://docs.orion.ai/architecture',
       ])
+      expect(result.telemetry).toBeNull()
     })
 
     it('calls the RAG pipeline in the correct order', async () => {
@@ -50,7 +52,7 @@ describe('ragRouter', () => {
       await caller.rag.chat({ question: 'Tell me about Vertex AI' })
 
       expect(getQueryEmbedding).toHaveBeenCalledWith('Tell me about Vertex AI')
-      expect(retrieveContext).toHaveBeenCalledWith([0.1, 0.2, 0.3])
+      expect(retrieveContext).toHaveBeenCalledWith([0.1, 0.2, 0.3], 3)
       expect(generateGroundedResponse).toHaveBeenCalled()
     })
 
