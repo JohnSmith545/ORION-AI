@@ -267,7 +267,7 @@ export const DashboardChatSection: React.FC<DashboardChatSectionProps> = ({
         ref={scrollRef}
         className="flex-1 overflow-y-auto chat-scroll pr-4 space-y-6 flex flex-col pb-4"
       >
-        {messages.length <= 2 && (
+        {messages.length <= 1 && (
           <div className="text-center mt-auto mb-auto opacity-80">
             <div className="w-16 h-16 rounded-full border border-primary/30 flex items-center justify-center mx-auto mb-4 animate-pulse-slow bg-primary/5 shadow-glow">
               <span className="material-symbols-outlined text-primary text-2xl">auto_awesome</span>
