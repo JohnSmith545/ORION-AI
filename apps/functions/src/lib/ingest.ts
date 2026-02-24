@@ -1,4 +1,4 @@
-import { getFirestore, FieldValue, Timestamp } from 'firebase-admin/firestore'
+import { getFirestore, FieldValue, Timestamp, WriteBatch } from 'firebase-admin/firestore'
 import { getStorage } from 'firebase-admin/storage'
 import { embedTexts } from './gemini.js'
 
@@ -81,21 +81,32 @@ export async function saveToFirestore(
     createdAt: Timestamp.now(),
   })
 
-  // 2. Save chunks as sub-collection.
-  // sourceUri is denormalized onto each chunk so retrieval never needs
-  // a second Firestore read to look up the parent document.
-  const batch = db.batch()
-  chunks.forEach((text, index) => {
-    const chunkRef = docRef.collection('chunks').doc()
-    batch.set(chunkRef, {
-      text,
-      sourceUri,
-      embedding: FieldValue.vector(embeddings[index]),
-      index,
-    })
-  })
+  // 2. Save chunks as sub-collection in batches of 450.
+  //    Firestore limits each WriteBatch to 500 operations — 450 gives a safety
+  //    margin so we never hit the hard cap, even with large documents.
+  //    sourceUri is denormalized onto each chunk so retrieval never needs
+  //    a second Firestore read to look up the parent document.
+  const BATCH_SIZE = 450
+  const batches: WriteBatch[] = []
 
-  await batch.commit()
+  for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
+    const batch = db.batch()
+    const slice = chunks.slice(i, i + BATCH_SIZE)
+
+    slice.forEach((text, sliceIndex) => {
+      const chunkRef = docRef.collection('chunks').doc()
+      batch.set(chunkRef, {
+        text,
+        sourceUri,
+        embedding: FieldValue.vector(embeddings[i + sliceIndex]),
+        index: i + sliceIndex,
+      })
+    })
+
+    batches.push(batch)
+  }
+
+  await Promise.all(batches.map(b => b.commit()))
 }
 
 /**

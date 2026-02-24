@@ -14,15 +14,23 @@ const ai = new GoogleGenAI({})
 
 /**
  * Generates semantic embeddings for an array of strings.
- * Sends all texts in a single batched request to minimise API round-trips.
+ * Processes texts in sequential batches of 100 to avoid Gemini API
+ * payload-size limits (413 Payload Too Large).
  */
 export async function embedTexts(texts: string[]): Promise<number[][]> {
-  const resp = await ai.models.embedContent({
-    model: EMBEDDING_MODEL,
-    contents: texts.map(t => ({ role: 'user', parts: [{ text: t }] })),
-  })
+  const EMBED_BATCH_SIZE = 100
+  const vectors: number[][] = []
 
-  const vectors: number[][] = resp.embeddings?.map(e => e.values ?? []) ?? []
+  for (let i = 0; i < texts.length; i += EMBED_BATCH_SIZE) {
+    const batch = texts.slice(i, i + EMBED_BATCH_SIZE)
+    const resp = await ai.models.embedContent({
+      model: EMBEDDING_MODEL,
+      contents: batch.map(t => ({ role: 'user' as const, parts: [{ text: t }] })),
+    })
+
+    const batchVectors: number[][] = resp.embeddings?.map(e => e.values ?? []) ?? []
+    vectors.push(...batchVectors)
+  }
 
   if (vectors.length !== texts.length) {
     throw new Error(`Embedding count mismatch: got ${vectors.length}, expected ${texts.length}`)
