@@ -11,7 +11,7 @@ process.env.GOOGLE_GENAI_USE_VERTEXAI = 'true'
 process.env.GOOGLE_CLOUD_PROJECT = PROJECT_ID
 process.env.GOOGLE_CLOUD_LOCATION = LOCATION
 
-const ai = new GoogleGenAI({})
+export const ai = new GoogleGenAI({})
 
 /** Result shape returned by generateGroundedResponse. */
 export interface GroundedResponse {

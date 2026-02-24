@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { Celestial3DViewer } from './Celestial3DViewer'
 import { ObservatoryModal } from './ObservatoryModal'
 
@@ -39,7 +39,7 @@ export const DashboardSidebarRight: React.FC<DashboardSidebarRightProps> = ({ ta
     : false
 
   return (
-    <aside className="hidden lg:flex glass-panel rounded-xl flex flex-col py-6 px-4 relative shadow-panel-glow w-full lg:w-[260px] flex-shrink-0 z-10">
+    <aside className="hidden lg:flex glass-panel rounded-xl flex-col py-6 px-4 relative shadow-panel-glow w-full lg:w-[260px] flex-shrink-0 z-10">
       <div className="space-y-6 flex-1">
         {/* TELEMETRY HEADER */}
         <div>

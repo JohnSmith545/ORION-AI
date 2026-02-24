@@ -3,6 +3,40 @@ import { trpc as trpcApi } from '../../lib/trpc'
 import { useAuth } from '../../hooks/useAuth'
 import type { CelestialTarget } from './DashboardSidebarRight'
 
+/* ── Web Speech API type declarations ────────────────────────── */
+interface SpeechRecognitionResult {
+  readonly [index: number]: { transcript: string; confidence: number }
+  readonly length: number
+  readonly isFinal: boolean
+}
+
+interface SpeechRecognitionResultList {
+  readonly [index: number]: SpeechRecognitionResult
+  readonly length: number
+}
+
+interface SpeechRecognitionEvent {
+  readonly results: SpeechRecognitionResultList
+}
+
+interface SpeechRecognitionErrorEvent {
+  readonly error: string
+  readonly message: string
+}
+
+interface SpeechRecognitionEngine {
+  continuous: boolean
+  interimResults: boolean
+  lang: string
+  onresult: ((event: SpeechRecognitionEvent) => void) | null
+  onstart: (() => void) | null
+  onend: (() => void) | null
+  onerror: ((event: SpeechRecognitionErrorEvent) => void) | null
+  start: () => void
+  stop: () => void
+  abort: () => void
+}
+
 export interface ChatMessage {
   id: string
   role: 'user' | 'assistant'
@@ -109,7 +143,13 @@ export const DashboardChatSection: React.FC<DashboardChatSectionProps> = ({
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [inputValue, setInputValue] = useState('')
   const [isTyping, setIsTyping] = useState(false)
+  const [isListening, setIsListening] = useState(false)
+  const [audioData, setAudioData] = useState<Uint8Array>(new Uint8Array(0))
   const scrollRef = useRef<HTMLDivElement>(null)
+  const recognitionRef = useRef<SpeechRecognitionEngine | null>(null)
+  const audioContextRef = useRef<AudioContext | null>(null)
+  const streamRef = useRef<MediaStream | null>(null)
+  const animationFrameRef = useRef<number>(0)
 
   // Load session messages when activeSessionId changes
   const { data: sessionData } = trpcApi.user.getSession.useQuery(
@@ -173,8 +213,107 @@ export const DashboardChatSection: React.FC<DashboardChatSectionProps> = ({
     })
   }, [messages, isTyping])
 
+  // Initialize Speech Recognition engine
+  useEffect(() => {
+    const SpeechRecognition =
+      (window as unknown as { SpeechRecognition: new () => SpeechRecognitionEngine })
+        .SpeechRecognition ||
+      (window as unknown as { webkitSpeechRecognition: new () => SpeechRecognitionEngine })
+        .webkitSpeechRecognition
+
+    if (SpeechRecognition) {
+      const recognition = new SpeechRecognition()
+      recognition.continuous = true
+      recognition.interimResults = true
+      recognition.lang = 'en-US'
+
+      recognition.onresult = (event: SpeechRecognitionEvent) => {
+        const transcript = Array.from(event.results)
+          .map(result => result[0].transcript)
+          .join('')
+        setInputValue(transcript)
+      }
+
+      recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+        console.error('Speech recognition error:', event.error)
+        if (event.error === 'network') {
+          console.warn('Network error: Browser may be blocking speech services.')
+        }
+        stopListening()
+      }
+
+      recognitionRef.current = recognition
+    }
+  }, [])
+
+  const stopListening = () => {
+    setIsListening(false)
+
+    try {
+      recognitionRef.current?.stop()
+    } catch (e) {
+      // Ignore errors if it's already stopped
+    }
+
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current)
+    }
+
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop())
+    }
+
+    // Safely close the AudioContext only if it is not already closed
+    if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+      audioContextRef.current.close().catch(console.error)
+    }
+
+    setAudioData(new Uint8Array(0))
+  }
+
+  const toggleListening = async () => {
+    if (isListening) {
+      stopListening()
+    } else {
+      if (!recognitionRef.current) {
+        alert('Voice to text is not supported in this browser. Please try Chrome or Edge.')
+        return
+      }
+
+      try {
+        // 1. Setup Microphone for the Visualizer
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+        streamRef.current = stream
+        const audioContext = new AudioContext()
+        audioContextRef.current = audioContext
+        const source = audioContext.createMediaStreamSource(stream)
+        const analyser = audioContext.createAnalyser()
+        analyser.fftSize = 64
+        source.connect(analyser)
+        const dataArray = new Uint8Array(analyser.frequencyBinCount)
+
+        const updateVisualizer = () => {
+          analyser.getByteFrequencyData(dataArray)
+          setAudioData(new Uint8Array(dataArray))
+          animationFrameRef.current = requestAnimationFrame(updateVisualizer)
+        }
+        updateVisualizer()
+
+        // 2. Start Speech Recognition
+        setInputValue('')
+        recognitionRef.current.start()
+        setIsListening(true)
+      } catch (err) {
+        console.error('Mic access denied', err)
+      }
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (isListening) {
+      stopListening()
+    }
     const trimmed = inputValue.trim()
     if (!trimmed) return
 
@@ -360,7 +499,13 @@ export const DashboardChatSection: React.FC<DashboardChatSectionProps> = ({
 
       <div className="mt-4 relative group/input-area">
         <div className="absolute -top-10 left-0 w-full h-10 bg-gradient-to-t from-background-dark to-transparent pointer-events-none" />
-        <div className="glass-login p-1.5 rounded-xl border border-white/15 bg-black/60 backdrop-blur-2xl relative overflow-hidden transition-all duration-300 focus-within:border-primary/50 focus-within:shadow-[0_0_25px_rgba(0,242,255,0.15)] focus-within:bg-black/70">
+        <div
+          className={`glass-login p-1.5 rounded-xl border transition-all duration-300 relative overflow-hidden backdrop-blur-2xl focus-within:border-primary/50 focus-within:shadow-[0_0_25px_rgba(0,242,255,0.15)] ${
+            isListening
+              ? 'border-red-500/50 shadow-[0_0_30px_rgba(239,68,68,0.2)] bg-red-950/10'
+              : 'border-white/15 bg-black/60 focus-within:bg-black/70'
+          }`}
+        >
           <form className="flex items-center gap-2" onSubmit={handleSubmit}>
             <button
               type="button"
@@ -377,9 +522,27 @@ export const DashboardChatSection: React.FC<DashboardChatSectionProps> = ({
               placeholder="Enter astronomical query..."
               aria-label="Message"
             />
+            {isListening && (
+              <div className="flex items-center gap-0.5 px-2 h-8">
+                {Array.from(audioData)
+                  .slice(0, 12)
+                  .map((val, i) => (
+                    <div
+                      key={i}
+                      className="w-1 bg-red-500 rounded-full transition-all duration-75"
+                      style={{ height: `${Math.max(4, (val / 255) * 100)}%` }}
+                    />
+                  ))}
+              </div>
+            )}
             <button
               type="button"
-              className="p-3 rounded-lg text-white/50 hover:text-white transition-colors hover:bg-white/5"
+              onClick={toggleListening}
+              className={`p-3 rounded-lg transition-colors ${
+                isListening
+                  ? 'text-red-500 bg-red-500/10 animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.5)]'
+                  : 'text-white/50 hover:text-white hover:bg-white/5'
+              }`}
               aria-label="Microphone"
             >
               <span className="material-symbols-outlined text-xl">mic</span>
