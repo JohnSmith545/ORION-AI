@@ -1,4 +1,5 @@
 import React from 'react'
+import { Celestial3DViewer } from './Celestial3DViewer'
 
 export interface CelestialTarget {
   name: string
@@ -30,30 +31,11 @@ export const DashboardSidebarRight: React.FC<DashboardSidebarRightProps> = ({ ta
             </span>
           </h3>
 
-          {/* HOLO TARGET ANIMATION */}
+          {/* 3D HOLO TARGET */}
           <div
-            className={`relative w-full aspect-square mb-6 flex items-center justify-center mt-4 overflow-hidden rounded-full p-4 transition-opacity duration-700 ${hasTarget ? 'opacity-100' : 'opacity-40'}`}
+            className={`h-48 w-48 mx-auto mb-6 mt-4 transition-opacity duration-700 ${hasTarget ? 'opacity-100' : 'opacity-40'}`}
           >
-            {/* Crosshairs */}
-            <div className="absolute top-1/2 left-0 w-full h-[1px] bg-primary/20 -translate-y-1/2"></div>
-            <div className="absolute left-1/2 top-0 h-full w-[1px] bg-primary/20 -translate-x-1/2"></div>
-
-            {/* Outer Orbit */}
-            <div className="absolute inset-2 border border-primary/20 rounded-full animate-spin-slow border-dashed"></div>
-
-            {/* Inner Orbit */}
-            <div className="absolute inset-8 border border-accent-violet/40 rounded-full animate-spin-reverse-slow border-dotted"></div>
-
-            {/* Core Element */}
-            <div
-              className={`absolute inset-14 rounded-full border flex items-center justify-center backdrop-blur-sm z-10 transition-all duration-700 ${hasTarget ? 'bg-primary/10 border-primary/50 shadow-[0_0_30px_rgba(0,242,255,0.4)]' : 'bg-white/5 border-white/20 shadow-none'}`}
-            >
-              <span
-                className={`material-symbols-outlined text-4xl ${hasTarget ? 'text-primary/80 animate-pulse-slow' : 'text-white/20 animate-pulse'}`}
-              >
-                {hasTarget ? 'flare' : 'radio_button_unchecked'}
-              </span>
-            </div>
+            <Celestial3DViewer targetType={targetData?.type} targetName={targetData?.name} />
           </div>
 
           {/* TARGET DATA */}
