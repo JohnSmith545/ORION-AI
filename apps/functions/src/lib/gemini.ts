@@ -60,17 +60,43 @@ const RESPONSE_SCHEMA = {
     telemetry: {
       type: Type.OBJECT,
       description:
-        'Telemetry data for a celestial object discussed in the response. Set to null if no specific celestial object is being discussed.',
+        'Telemetry data for ANY astronomical topic discussed in the response — a specific celestial object, a general space concept (e.g., gamma rays, dark matter), a space mission, or a phenomenon. Set to null ONLY if the user is asking a completely non-space question (e.g., "hello" or "how are you").',
       nullable: true,
       properties: {
-        name: { type: Type.STRING, description: 'Object name in uppercase, e.g. JUPITER' },
-        type: { type: Type.STRING, description: 'Classification, e.g. Gas Giant' },
-        ra: { type: Type.STRING, description: 'Right Ascension, e.g. 12h 00m 00s' },
-        dec: { type: Type.STRING, description: 'Declination, e.g. +00° 00\' 00"' },
-        distance: { type: Type.STRING, description: 'Distance from Earth in LY or AU' },
+        name: {
+          type: Type.STRING,
+          description:
+            'The name of the object or concept in uppercase (e.g., "GAMMA RAY", "BLACK HOLE", "JUPITER", "DARK MATTER").',
+        },
+        type: {
+          type: Type.STRING,
+          description:
+            'The category (e.g., "Electromagnetic Radiation", "Theoretical Physics", "Gas Giant", "Space Mission").',
+        },
+        ra: {
+          type: Type.STRING,
+          description:
+            'Right Ascension. If the topic is a general concept without specific coordinates, return "N/A" or "UNIVERSAL".',
+        },
+        dec: {
+          type: Type.STRING,
+          description:
+            'Declination. If the topic is a general concept without specific coordinates, return "N/A" or "UNIVERSAL".',
+        },
+        distance: {
+          type: Type.STRING,
+          description:
+            'Distance from Earth in LY or AU. If the topic is a general concept, return "N/A".',
+        },
         description: {
           type: Type.STRING,
-          description: 'A short 1-2 sentence scientific summary of the object.',
+          description: 'A short 1-2 sentence scientific summary of the object or concept.',
+        },
+        imageKeyword: {
+          type: Type.STRING,
+          nullable: true,
+          description:
+            'Always provide a highly specific search keyword to query the NASA Image API for this topic (e.g., "Gamma Ray Burst", "Event Horizon", "Andromeda Galaxy", "International Space Station"). Only return null if it is a standard simple planet or star that should use a 3D sphere.',
         },
       },
     },
@@ -98,7 +124,7 @@ Always cite your sources using the source numbers provided in brackets, like [So
 
 CRITICAL RULE: Even if the user asks a completely unrelated question, says a simple greeting like "Hi", or the context is irrelevant, you MUST enthusiastically include a fascinating, related astronomy or space fact in your response.
 
-TELEMETRY EXTRACTION RULE: When your response discusses a SPECIFIC celestial object (star, planet, moon, galaxy, nebula, etc.), you MUST populate the "telemetry" field with accurate data for that object. If the user is just chatting normally, greeting you, or no specific celestial object is the primary subject, set "telemetry" to null.
+TELEMETRY EXTRACTION RULE: When your response discusses ANY astronomical topic — a specific celestial object (star, planet, moon, galaxy, nebula), a general space concept (gamma rays, dark matter, cosmic microwave background), a space mission (Apollo, Voyager, James Webb), or a phenomenon (supernova, gravitational lensing, solar wind) — you MUST populate the "telemetry" field. For general concepts without exact coordinates, use "N/A" or "UNIVERSAL" for ra, dec, and distance. Set "telemetry" to null ONLY if the user is asking a completely non-space question (e.g., "hello", "how are you", or other non-astronomical small talk).
 
 CONTEXT:
 ${contextBody}
@@ -107,7 +133,7 @@ STRICT INSTRUCTIONS:
 1. Maintain an energetic, space-loving tone.
 2. ALWAYS include a random space fact.
 3. Use markdown for formatting in the "text" field.
-4. Populate "telemetry" ONLY when a specific celestial object is the main subject of your answer.
+4. Populate "telemetry" for ANY space-related topic. Only set it to null for completely non-space questions.
   `.trim()
 
   // Build multi-turn contents: system prompt baked into the first user turn,
