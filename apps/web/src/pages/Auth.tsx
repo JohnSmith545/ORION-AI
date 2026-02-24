@@ -3,20 +3,23 @@ import { CosmicBackground } from '../components/CosmicBackground'
 import { AuthLayout } from '../features/auth/components/AuthLayout'
 import { LoginForm } from '../features/auth/components/LoginForm'
 import { SignupForm } from '../features/auth/components/SignupForm'
+import { RecoverAccessForm } from '../features/auth/components/RecoverAccessForm'
+
+type AuthView = 'login' | 'signup' | 'recover'
 
 /**
  * Auth Page
  *
  * Main entry point for authentication, managing toggle between
- * Login and Signup forms with the cosmic theme.
+ * Login, Signup, and Recover Access forms with the cosmic theme.
  */
 export const Auth: React.FC = () => {
-  const [isLogin, setIsLogin] = useState(true)
+  const [view, setView] = useState<AuthView>('login')
   const [progress, setProgress] = useState(0)
 
-  const toggleForm = () => {
-    setIsLogin(!isLogin)
-    setProgress(0) // Reset progress on toggle
+  const switchView = (next: AuthView) => {
+    setView(next)
+    setProgress(0)
   }
 
   return (
@@ -31,12 +34,12 @@ export const Auth: React.FC = () => {
         progress={progress}
         footer={
           <p className="text-xs md:text-sm text-white/30 font-light tracking-widest uppercase font-mono">
-            {isLogin ? (
+            {view === 'login' ? (
               <>
                 New to the network?{' '}
                 <button
                   className="text-primary/70 hover:text-primary underline decoration-primary/20 underline-offset-8 transition-all hover:drop-shadow-[0_0_8px_rgba(0,242,255,0.4)]"
-                  onClick={toggleForm}
+                  onClick={() => switchView('signup')}
                   type="button"
                 >
                   Sign Up
@@ -47,7 +50,7 @@ export const Auth: React.FC = () => {
                 Existing operative?{' '}
                 <button
                   className="text-primary/70 hover:text-primary underline decoration-primary/20 underline-offset-8 transition-all hover:drop-shadow-[0_0_8px_rgba(0,242,255,0.4)]"
-                  onClick={toggleForm}
+                  onClick={() => switchView('login')}
                   type="button"
                 >
                   Log in
@@ -57,11 +60,13 @@ export const Auth: React.FC = () => {
           </p>
         }
       >
-        {isLogin ? (
-          <LoginForm onProgressChange={setProgress} />
-        ) : (
-          <SignupForm onProgressChange={setProgress} onLoginClick={toggleForm} />
+        {view === 'login' && (
+          <LoginForm onProgressChange={setProgress} onRecoverClick={() => switchView('recover')} />
         )}
+        {view === 'signup' && (
+          <SignupForm onProgressChange={setProgress} onLoginClick={() => switchView('login')} />
+        )}
+        {view === 'recover' && <RecoverAccessForm onLoginClick={() => switchView('login')} />}
       </AuthLayout>
     </CosmicBackground>
   )
