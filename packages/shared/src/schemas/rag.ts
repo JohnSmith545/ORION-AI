@@ -21,6 +21,8 @@ export const TelemetrySchema = z.object({
   dec: z.string(),
   distance: z.string(),
   description: z.string(),
+  imageKeyword: z.string().nullable().optional(),
+  imageUrl: z.string().nullable().optional(),
 })
 
 export type Telemetry = z.infer<typeof TelemetrySchema>
