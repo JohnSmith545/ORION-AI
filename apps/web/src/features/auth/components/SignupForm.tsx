@@ -226,7 +226,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onProgressChange, onLogi
         </div>
 
         <button
-          className="mt-4 w-full py-4 px-4 rounded-lg btn-primary-glow text-white font-display text-base uppercase tracking-[0.15em] relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed"
+          className="mt-2 w-full py-3.5 px-4 rounded-lg btn-primary-glow text-white font-display text-base uppercase tracking-[0.15em] relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed"
           type="submit"
           disabled={loading}
         >
@@ -266,7 +266,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onProgressChange, onLogi
         </button>
       </form>
 
-      <div className="mt-8 pt-6 border-t border-white/5 flex flex-col items-center gap-4">
+      <div className="mt-5 pt-4 border-t border-white/5 flex flex-col items-center gap-3">
         <p className="text-xs md:text-sm text-white/30 font-light uppercase tracking-widest">
           Or register via quantum link
         </p>
