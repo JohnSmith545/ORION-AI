@@ -13,10 +13,25 @@ export const ChatQuerySchema = z.object({
     .optional(),
 })
 
+// Telemetry data for a celestial object, returned by Gemini structured output.
+export const TelemetrySchema = z.object({
+  name: z.string(),
+  type: z.string(),
+  ra: z.string(),
+  dec: z.string(),
+  distance: z.string(),
+  description: z.string(),
+  imageKeyword: z.string().nullable().optional(),
+  imageUrl: z.string().nullable().optional(),
+})
+
+export type Telemetry = z.infer<typeof TelemetrySchema>
+
 // Output for the Chat Interface
 export const ChatResponseSchema = z.object({
   response: z.string(),
   citations: z.array(z.string()),
+  telemetry: TelemetrySchema.nullable().optional(),
 })
 
 // Input for Ingestion.

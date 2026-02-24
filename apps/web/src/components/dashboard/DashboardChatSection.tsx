@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { trpc as trpcApi } from '../../lib/trpc'
 import { useAuth } from '../../hooks/useAuth'
+import type { CelestialTarget } from './DashboardSidebarRight'
 
 export interface ChatMessage {
   id: string
@@ -14,6 +15,7 @@ export interface ChatMessage {
 interface DashboardChatSectionProps {
   activeSessionId: string | null
   onSessionCreated: (sessionId: string) => void
+  onUpdateTarget?: (target: CelestialTarget) => void
 }
 
 function formatTime() {
@@ -96,6 +98,7 @@ function renderMarkdown(text: string): React.ReactNode[] {
 export const DashboardChatSection: React.FC<DashboardChatSectionProps> = ({
   activeSessionId,
   onSessionCreated,
+  onUpdateTarget,
 }) => {
   const { user } = useAuth()
   const chatMutation = trpcApi.rag.chat.useMutation()
@@ -207,6 +210,11 @@ export const DashboardChatSection: React.FC<DashboardChatSectionProps> = ({
         citations: result.citations?.length ? result.citations : undefined,
       }
       setMessages(prev => [...prev, aiMsg])
+
+      // Pass through telemetry from Gemini's structured JSON output to the sidebar.
+      if (result.telemetry) {
+        onUpdateTarget?.(result.telemetry)
+      }
 
       // Persist to Firestore in the background
       const messagesToSave = [

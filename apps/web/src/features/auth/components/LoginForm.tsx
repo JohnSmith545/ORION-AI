@@ -12,6 +12,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onProgressChange }) => {
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -130,19 +131,22 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onProgressChange }) => {
               lock
             </span>
             <input
-              className="w-full pl-10 pr-4 py-3.5 text-base text-white placeholder-white/20 rounded-lg input-glass focus:ring-0"
+              className="w-full pl-10 pr-12 py-3.5 text-base text-white placeholder-white/20 rounded-lg input-glass focus:ring-0"
               id="password"
               placeholder="••••••••••••"
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               value={password}
               onChange={e => setPassword(e.target.value)}
               required
             />
             <button
               className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white transition-colors"
+              onClick={() => setShowPassword(!showPassword)}
               type="button"
             >
-              <span className="material-symbols-outlined text-lg">visibility</span>
+              <span className="material-symbols-outlined text-lg">
+                {showPassword ? 'visibility_off' : 'visibility'}
+              </span>
             </button>
           </div>
         </div>

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { ingestDocument } from './ingest.js'
+import { ingestDocument, saveToFirestore } from './ingest.js'
 import * as gemini from './gemini.js'
 
 // Mock Firebase Storage (used by fetchFromGCS)
@@ -13,12 +13,15 @@ vi.mock('firebase-admin/storage', () => ({
   }),
 }))
 
-// Mock Firestore
+// Mock Firestore — track batch() calls to verify batching logic
+const mockBatchSet = vi.fn()
+const mockBatchCommit = vi.fn().mockResolvedValue(true)
+const mockBatchFn = vi.fn().mockImplementation(() => ({
+  set: mockBatchSet,
+  commit: mockBatchCommit,
+}))
+
 vi.mock('firebase-admin/firestore', () => {
-  const mockBatch = {
-    set: vi.fn(),
-    commit: vi.fn().mockResolvedValue(true),
-  }
   const mockDoc = {
     set: vi.fn().mockResolvedValue(true),
     collection: vi.fn().mockReturnValue({
@@ -31,7 +34,7 @@ vi.mock('firebase-admin/firestore', () => {
   return {
     getFirestore: vi.fn().mockReturnValue({
       collection: vi.fn().mockReturnValue(mockCollection),
-      batch: vi.fn().mockReturnValue(mockBatch),
+      batch: (...args: unknown[]) => mockBatchFn(...args),
     }),
     FieldValue: {
       vector: vi.fn(v => v),
@@ -40,6 +43,7 @@ vi.mock('firebase-admin/firestore', () => {
     Timestamp: {
       now: vi.fn().mockReturnValue('mock-timestamp'),
     },
+    WriteBatch: vi.fn(),
   }
 })
 
@@ -77,7 +81,7 @@ describe('Ingestion Workflow Integration', () => {
     const { getFirestore } = await import('firebase-admin/firestore')
     const db = getFirestore()
     expect(db.collection).toHaveBeenCalledWith('docs')
-    expect(db.batch).toHaveBeenCalled()
+    expect(mockBatchFn).toHaveBeenCalled()
   })
 
   it('should read from GCS and NOT call fetch for sourceType gcs', async () => {
@@ -90,5 +94,37 @@ describe('Ingestion Workflow Integration', () => {
 
     const { getStorage } = await import('firebase-admin/storage')
     expect(getStorage).toHaveBeenCalled()
+  })
+})
+
+describe('saveToFirestore batching', () => {
+  afterEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('should create multiple WriteBatch instances for > 450 chunks', async () => {
+    const chunkCount = 500
+    const chunks = Array.from({ length: chunkCount }, (_, i) => `chunk-${i}`)
+    const embeddings = Array.from({ length: chunkCount }, () => [0.1, 0.2])
+
+    await saveToFirestore('doc_test', 'Test', 'gs://bucket/file.txt', chunks, embeddings)
+
+    // 500 chunks / 450 per batch = 2 batches
+    expect(mockBatchFn).toHaveBeenCalledTimes(2)
+    expect(mockBatchCommit).toHaveBeenCalledTimes(2)
+    // First batch should have 450 set() calls, second should have 50
+    expect(mockBatchSet).toHaveBeenCalledTimes(chunkCount)
+  })
+
+  it('should use a single WriteBatch for <= 450 chunks', async () => {
+    const chunkCount = 100
+    const chunks = Array.from({ length: chunkCount }, (_, i) => `chunk-${i}`)
+    const embeddings = Array.from({ length: chunkCount }, () => [0.5, 0.6])
+
+    await saveToFirestore('doc_small', 'Small', 'gs://bucket/small.txt', chunks, embeddings)
+
+    expect(mockBatchFn).toHaveBeenCalledTimes(1)
+    expect(mockBatchCommit).toHaveBeenCalledTimes(1)
+    expect(mockBatchSet).toHaveBeenCalledTimes(chunkCount)
   })
 })

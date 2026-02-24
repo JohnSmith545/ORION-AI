@@ -1,18 +1,33 @@
 import { z } from 'zod'
 import { router, publicProcedure, protectedProcedure } from '../trpc.js'
-import {
-  CreateUserSchema,
-  UserSchema,
-  CreateSessionSchema,
-  AddMessagesSchema,
-  GetSessionSchema,
-  DeleteSessionSchema,
-  CreateFolderSchema,
-  RenameFolderSchema,
-  DeleteFolderSchema,
-  ArchiveSessionSchema,
-  UnarchiveSessionSchema,
-} from '@repo/shared'
+import { CreateUserSchema, UserSchema } from '@repo/shared'
+
+// ── Local Schema Definitions ──────────────────────────────────────────
+// These are defined locally to fix build errors and ensure strict typing.
+
+const SessionMessageSchema = z.object({
+  role: z.enum(['user', 'assistant']),
+  content: z.string(),
+  citations: z.array(z.string()).optional(),
+})
+
+const CreateSessionSchema = z.object({
+  title: z.string().min(1).max(200),
+  messages: z.array(SessionMessageSchema).min(1),
+})
+
+const AddMessagesSchema = z.object({
+  sessionId: z.string().min(1),
+  messages: z.array(SessionMessageSchema).min(1),
+})
+
+const GetSessionSchema = z.object({
+  sessionId: z.string().min(1),
+})
+
+const DeleteSessionSchema = z.object({
+  sessionId: z.string().min(1),
+})
 
 export const userRouter = router({
   create: publicProcedure
