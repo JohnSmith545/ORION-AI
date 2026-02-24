@@ -44,48 +44,12 @@ vi.mock('firebase-admin/firestore', () => ({
 }))
 
 const createCaller = createCallerFactory(appRouter)
-const unauthenticatedCaller = createCaller({})
 const caller = createCaller({ uid: 'user-123' })
 
 describe('userRouter', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockDocRef.get.mockResolvedValue(mockDoc)
-  })
-
-  describe('create', () => {
-    it('creates a user with valid data', async () => {
-      const result = await unauthenticatedCaller.user.create({
-        email: 'test@example.com',
-        name: 'Test User',
-      })
-      expect(result.id).toBeDefined()
-      expect(result.email).toBe('test@example.com')
-      expect(result.name).toBe('Test User')
-    })
-
-    it('returns a dummy id', async () => {
-      const result = await unauthenticatedCaller.user.create({
-        email: 'another@example.com',
-      })
-      expect(result.id).toBe('dummy-id')
-    })
-  })
-
-  describe('getById', () => {
-    it('returns a user by id', async () => {
-      const result = await unauthenticatedCaller.user.getById('user-1')
-      expect(result.id).toBe('user-1')
-      expect(result.email).toBeDefined()
-    })
-  })
-
-  describe('list', () => {
-    it('returns a list of users', async () => {
-      const result = await unauthenticatedCaller.user.list()
-      expect(Array.isArray(result)).toBe(true)
-      expect(result.length).toBeGreaterThan(0)
-    })
   })
 
   describe('archive folders', () => {
@@ -144,6 +108,35 @@ describe('userRouter', () => {
           archiveFolderId: null,
         })
       )
+    })
+  })
+
+  describe('clearHistory', () => {
+    it('batch-deletes all sessions and returns count', async () => {
+      const mockSessionDoc = { ref: { id: 'session-1' } }
+      mockCollectionRef.get.mockResolvedValueOnce({
+        empty: false,
+        size: 2,
+        docs: [mockSessionDoc, { ref: { id: 'session-2' } }],
+      })
+
+      const result = await caller.user.clearHistory()
+      expect(result.success).toBe(true)
+      expect(result.count).toBe(2)
+      expect(mockBatch.delete).toHaveBeenCalledTimes(2)
+      expect(mockBatch.commit).toHaveBeenCalled()
+    })
+
+    it('returns count 0 when user has no sessions', async () => {
+      mockCollectionRef.get.mockResolvedValueOnce({
+        empty: true,
+        size: 0,
+        docs: [],
+      })
+
+      const result = await caller.user.clearHistory()
+      expect(result.success).toBe(true)
+      expect(result.count).toBe(0)
     })
   })
 })

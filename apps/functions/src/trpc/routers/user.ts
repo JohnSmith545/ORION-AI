@@ -181,6 +181,24 @@ export const userRouter = router({
     return { success: true }
   }),
 
+  // ── Clear all chat history for the current user ──────────────────────
+  clearHistory: protectedProcedure.mutation(async ({ ctx }) => {
+    const { getFirestore } = await import('firebase-admin/firestore')
+    const db = getFirestore()
+
+    // Fetch all sessions belonging to this user
+    const snapshot = await db.collection('chatSessions').where('userId', '==', ctx.uid).get()
+
+    if (snapshot.empty) return { success: true, count: 0 }
+
+    // Batch delete all found sessions
+    const batch = db.batch()
+    snapshot.docs.forEach(doc => batch.delete(doc.ref))
+    await batch.commit()
+
+    return { success: true, count: snapshot.size }
+  }),
+
   // ── Archive Folders ───────────────────────────────────────────────────
 
   getArchiveFolders: protectedProcedure.query(async ({ ctx }) => {

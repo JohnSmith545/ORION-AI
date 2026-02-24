@@ -1,10 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../../hooks/useAuth'
+import { trpc } from '../../lib/trpc'
 
 export const DashboardHeader: React.FC = () => {
   const { user, logout, role } = useAuth()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const clearHistoryMutation = trpc.user.clearHistory.useMutation()
+  const utils = trpc.useUtils()
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -99,6 +102,32 @@ export const DashboardHeader: React.FC = () => {
                   </div>
                 </div>
               </div>
+              {/* Clear History */}
+              <button
+                type="button"
+                onClick={async () => {
+                  if (
+                    window.confirm(
+                      'Are you sure you want to clear ALL chat history? This cannot be undone.'
+                    )
+                  ) {
+                    await clearHistoryMutation.mutateAsync()
+                    utils.user.getChatHistory.invalidate()
+                    setIsMenuOpen(false)
+                    // Optional: reload the page to cleanly reset the active session state
+                    window.location.reload()
+                  }
+                }}
+                disabled={clearHistoryMutation.isPending}
+                className="w-full px-4 py-2.5 mt-1 border-t border-white/5 text-left flex items-center gap-3 hover:bg-orange-500/10 transition-colors group/clear disabled:opacity-50"
+              >
+                <span className="material-symbols-outlined text-[18px] text-orange-500/70 group-hover/clear:text-orange-400">
+                  delete_sweep
+                </span>
+                <span className="text-xs font-mono text-orange-500/70 group-hover/clear:text-orange-400 uppercase tracking-wider">
+                  {clearHistoryMutation.isPending ? 'Clearing...' : 'Clear History'}
+                </span>
+              </button>
               {/* Logout */}
               <button
                 type="button"

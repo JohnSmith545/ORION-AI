@@ -29,8 +29,11 @@ export const ragRouter = router({
       } = await generateGroundedResponse(question, context, input.history)
       let telemetry = rawTelemetry
 
-      // 4. If Gemini flagged this as a complex object, fetch a NASA image
+      // 4. If Gemini flagged this as a complex object, fetch an image (NASA -> Wikipedia fallback)
       if (telemetry?.imageKeyword) {
+        let imageUrl: string | undefined
+
+        // Attempt 1: NASA Image Library
         try {
           const nasaRes = await fetch(
             `https://images-api.nasa.gov/search?q=${encodeURIComponent(telemetry.imageKeyword)}&media_type=image`
@@ -39,13 +42,36 @@ export const ragRouter = router({
             const nasaJson = (await nasaRes.json()) as {
               collection?: { items?: { links?: { href?: string }[] }[] }
             }
-            const imageUrl = nasaJson?.collection?.items?.[0]?.links?.[0]?.href
-            if (imageUrl) {
-              telemetry = { ...telemetry, imageUrl }
-            }
+            imageUrl = nasaJson?.collection?.items?.[0]?.links?.[0]?.href
           }
         } catch {
-          // NASA API failure is non-fatal — frontend falls back to 3D viewer
+          // NASA failed, proceed to fallback
+        }
+
+        // Attempt 2: Wikipedia API Fallback
+        if (!imageUrl) {
+          try {
+            const wikiRes = await fetch(
+              `https://en.wikipedia.org/w/api.php?action=query&prop=pageimages&format=json&piprop=original&titles=${encodeURIComponent(telemetry.imageKeyword)}`
+            )
+            if (wikiRes.ok) {
+              const wikiJson = await wikiRes.json()
+              const pages = wikiJson?.query?.pages
+              if (pages) {
+                // Wikipedia returns dynamic keys for page IDs, so we extract the first one
+                const pageId = Object.keys(pages)[0]
+                if (pageId !== '-1') {
+                  imageUrl = pages[pageId]?.original?.source
+                }
+              }
+            }
+          } catch {
+            // Wikipedia failed, leave imageUrl undefined (frontend falls back to 3D sphere)
+          }
+        }
+
+        if (imageUrl) {
+          telemetry = { ...telemetry, imageUrl }
         }
       }
 
