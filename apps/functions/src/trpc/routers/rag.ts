@@ -22,9 +22,34 @@ export const ragRouter = router({
       const context = await retrieveContext(vector, 3)
 
       // 3. Send to Gemini with conversation history for multi-turn context
-      const { text, telemetry } = await generateGroundedResponse(question, context, input.history)
+      const { text, telemetry: rawTelemetry } = await generateGroundedResponse(
+        question,
+        context,
+        input.history
+      )
+      let telemetry = rawTelemetry
 
-      // 4. Return exactly what DashboardChatSection expects
+      // 4. If Gemini flagged this as a complex object, fetch a NASA image
+      if (telemetry?.imageKeyword) {
+        try {
+          const nasaRes = await fetch(
+            `https://images-api.nasa.gov/search?q=${encodeURIComponent(telemetry.imageKeyword)}&media_type=image`
+          )
+          if (nasaRes.ok) {
+            const nasaJson = (await nasaRes.json()) as {
+              collection?: { items?: { links?: { href?: string }[] }[] }
+            }
+            const imageUrl = nasaJson?.collection?.items?.[0]?.links?.[0]?.href
+            if (imageUrl) {
+              telemetry = { ...telemetry, imageUrl }
+            }
+          }
+        } catch {
+          // NASA API failure is non-fatal — frontend falls back to 3D viewer
+        }
+      }
+
+      // 5. Return exactly what DashboardChatSection expects
       return {
         response: text,
         citations: Array.from(new Set(context.map(c => c.sourceUri))),
