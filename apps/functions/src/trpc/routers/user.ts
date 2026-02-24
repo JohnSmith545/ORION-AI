@@ -1,17 +1,29 @@
 import { z } from 'zod'
-import { router, publicProcedure, protectedProcedure } from '../trpc.js'
-import {
-  CreateUserSchema,
-  UserSchema,
-  CreateFolderSchema,
-  RenameFolderSchema,
-  DeleteFolderSchema,
-  ArchiveSessionSchema,
-  UnarchiveSessionSchema,
-} from '@repo/shared'
+import { router, protectedProcedure } from '../trpc.js'
 
 // ── Local Schema Definitions ──────────────────────────────────────────
-// These are defined locally because they are not exported from @repo/shared.
+
+export const CreateFolderSchema = z.object({
+  name: z.string().min(1).max(50).trim(),
+})
+
+export const RenameFolderSchema = z.object({
+  folderId: z.string().min(1),
+  name: z.string().min(1).max(50).trim(),
+})
+
+export const DeleteFolderSchema = z.object({
+  folderId: z.string().min(1),
+})
+
+export const ArchiveSessionSchema = z.object({
+  sessionId: z.string().min(1),
+  folderId: z.string().min(1),
+})
+
+export const UnarchiveSessionSchema = z.object({
+  sessionId: z.string().min(1),
+})
 
 const SessionMessageSchema = z.object({
   role: z.enum(['user', 'assistant']),
@@ -38,29 +50,6 @@ const DeleteSessionSchema = z.object({
 })
 
 export const userRouter = router({
-  create: publicProcedure
-    .input(CreateUserSchema)
-    .output(UserSchema)
-    .mutation(({ input }) => ({
-      id: 'dummy-id',
-      email: input.email,
-      name: input.name,
-    })),
-
-  getById: publicProcedure
-    .input(z.string())
-    .output(UserSchema)
-    .query(({ input }) => ({
-      id: input,
-      email: 'test@example.com',
-      name: 'Test User',
-    })),
-
-  list: publicProcedure.output(z.array(UserSchema)).query(() => [
-    { id: 'user-1', email: 'user1@example.com', name: 'User One' },
-    { id: 'user-2', email: 'user2@example.com', name: 'User Two' },
-  ]),
-
   // ── Get current user's profile (including role) ─────────────────────
   getMe: protectedProcedure.query(async ({ ctx }) => {
     const { getFirestore } = await import('firebase-admin/firestore')

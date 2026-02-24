@@ -17,6 +17,8 @@ const ai = new GoogleGenAI({})
 export interface GroundedResponse {
   text: string
   telemetry: Telemetry | null
+  usedSources: number[]
+  contextIsRelevant: boolean
 }
 
 /**
@@ -100,8 +102,21 @@ const RESPONSE_SCHEMA = {
         },
       },
     },
+    usedSources: {
+      type: Type.ARRAY,
+      description:
+        'An array of the source numbers you actually used and cited in your response. For example, if you cited [Source 1] and [Source 3], return [1, 3]. If you did not use any sources, return an empty array [].',
+      items: {
+        type: Type.INTEGER,
+      },
+    },
+    contextIsRelevant: {
+      type: Type.BOOLEAN,
+      description:
+        'Analyze the user query and the CONTEXT. Is the context actually helpful and relevant to answering the query? Return true if yes, return false if it is completely unrelated.',
+    },
   },
-  required: ['text'],
+  required: ['text', 'contextIsRelevant', 'usedSources'],
 }
 
 /**
@@ -118,42 +133,39 @@ export async function generateGroundedResponse(
     .join('\n\n')
 
   const systemPrompt = `
-You are ORION AI, an incredibly passionate and enthusiastic astronomy expert. Use the following context to answer the user's question.
-If the context is empty or does not contain the answer, fall back to your general knowledge to answer the question gracefully. Do not mention that the context was empty.
-Always cite your sources using the source numbers provided in brackets, like [Source 1].
+You are ORION AI, an incredibly passionate and enthusiastic astronomy expert. You will be provided with CONTEXT snippets to help answer the user's question.
 
-CRITICAL RULE: Even if the user asks a completely unrelated question, says a simple greeting like "Hi", or the context is irrelevant, you MUST enthusiastically include a fascinating, related astronomy or space fact in your response.
+CITATION & CONTEXT RULES:
+- First, determine if the CONTEXT is relevant to the query and set "contextIsRelevant" to true or false.
+- IF RELEVANT (true): Use the information, cite it using [Source 1], and list the source numbers in "usedSources".
+- IF IRRELEVANT (false): COMPLETELY IGNORE THE CONTEXT. Answer using your own built-in knowledge. Do NOT output any source brackets in the text, and return an empty [] for "usedSources".
 
-TELEMETRY EXTRACTION RULE: When your response discusses ANY astronomical topic — a specific celestial object (star, planet, moon, galaxy, nebula), a general space concept (gamma rays, dark matter, cosmic microwave background), a space mission (Apollo, Voyager, James Webb), or a phenomenon (supernova, gravitational lensing, solar wind) — you MUST populate the "telemetry" field. For general concepts without exact coordinates, use "N/A" or "UNIVERSAL" for ra, dec, and distance. Set "telemetry" to null ONLY if the user is asking a completely non-space question (e.g., "hello", "how are you", or other non-astronomical small talk).
+THE SPACE PIVOT RULE:
+- If the user asks about an astronomical topic, answer it and include a brief, related space fact.
+- If the user asks a completely NON-SPACE related question (e.g., cooking, programming, general greetings, etc.), answer their query politely, but then you MUST pivot and provide a VERY LONG, highly detailed, and wildly enthusiastic fun fact about astrophysics or the cosmos to drag the conversation back to space.
+
+TELEMETRY EXTRACTION RULE: When your response discusses ANY astronomical topic — a specific celestial object, a general space concept, a space mission, or a phenomenon — you MUST populate the "telemetry" field. For general concepts without exact coordinates, use "N/A" or "UNIVERSAL" for ra, dec, and distance. Set "telemetry" to null ONLY if the user is asking a completely non-space question.
 
 CONTEXT:
 ${contextBody}
-
-STRICT INSTRUCTIONS:
-1. Maintain an energetic, space-loving tone.
-2. ALWAYS include a random space fact.
-3. Use markdown for formatting in the "text" field.
-4. Populate "telemetry" for ANY space-related topic. Only set it to null for completely non-space questions.
   `.trim()
 
-  // Build multi-turn contents: system prompt baked into the first user turn,
-  // followed by prior conversation history, then the current question.
+  // Build multi-turn contents: history is passed exactly as it occurred,
+  // and the system prompt (with CURRENT context) is prepended to the CURRENT question.
   const contents: { role: 'user' | 'model'; parts: { text: string }[] }[] = []
 
   if (history && history.length > 0) {
-    // First history entry gets the system prompt prepended
-    contents.push({
-      role: 'user',
-      parts: [{ text: systemPrompt + '\n\nUSER QUESTION:\n' + history[0].text }],
-    })
-    // Remaining history turns
-    for (let i = 1; i < history.length; i++) {
+    // Push the history exactly as it occurred
+    for (let i = 0; i < history.length; i++) {
       contents.push({ role: history[i].role, parts: [{ text: history[i].text }] })
     }
-    // Current question
-    contents.push({ role: 'user', parts: [{ text: query }] })
+    // Prepend the system prompt and CURRENT context to the CURRENT question
+    contents.push({
+      role: 'user',
+      parts: [{ text: systemPrompt + '\n\nUSER QUESTION:\n' + query }],
+    })
   } else {
-    // No history — single turn with system prompt + question (original behaviour)
+    // No history — single turn with system prompt + question
     contents.push({
       role: 'user',
       parts: [{ text: systemPrompt + '\n\nUSER QUESTION:\n' + query }],
@@ -177,16 +189,30 @@ STRICT INSTRUCTIONS:
 
   // Parse the structured JSON output. Fallback gracefully if parsing fails.
   try {
-    const parsed = JSON.parse(raw) as { text: string; telemetry?: Telemetry | null }
+    const parsed = JSON.parse(raw) as {
+      text: string
+      telemetry?: Telemetry | null
+      usedSources?: number[]
+      contextIsRelevant?: boolean
+    }
+
+    // THE FAILSAFE: If Gemini admits the context is irrelevant, we hard-override and wipe the sources
+    // so they never reach the frontend, even if it hallucinated numbers in the array.
+    const safeUsedSources = parsed.contextIsRelevant === false ? [] : parsed.usedSources ?? []
+
     return {
       text: parsed.text,
       telemetry: parsed.telemetry ?? null,
+      usedSources: safeUsedSources,
+      contextIsRelevant: parsed.contextIsRelevant ?? false,
     }
   } catch {
     // If JSON parsing fails, treat the raw output as plain text with no telemetry.
     return {
       text: raw,
       telemetry: null,
+      usedSources: [],
+      contextIsRelevant: false,
     }
   }
 }

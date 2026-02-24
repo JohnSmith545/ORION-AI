@@ -21,16 +21,17 @@
     "@trpc/server": "^11.0.0-rc.660",
     "cors": "^2.8.5",
     "express": "^4.21.2",
+    "express-rate-limit": "^8.2.1",
     "firebase-admin": "^13.6.1",
     "firebase-functions": "^6.3.2",
     "google-auth-library": "^10.5.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@types/cors": "^2.8.17",
-    "@types/express": "^5.0.0",
     "@repo/config": "workspace:*",
     "@repo/eslint-config": "workspace:*",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
     "eslint": "^8.57.0",
     "typescript": "5.5.4",
     "vitest": "^2.1.8"

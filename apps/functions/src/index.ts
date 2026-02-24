@@ -28,13 +28,28 @@ export const api = onRequest({ maxInstances: 10 }, async (req, res) => {
 
     const app = express()
 
-    // Apply CORS with explicit settings to force preflight success
+    // Trust proxy is required for rate limiting to correctly identify client IPs behind Firebase proxy
+    app.set('trust proxy', 1)
+
+    // Apply CORS with restricted origins
     app.use(
       cors({
-        origin: true, // Echoes the request origin
+        origin: ['https://orion-ai-2790b.web.app', 'http://localhost:5173'],
         credentials: true,
         methods: ['GET', 'POST', 'OPTIONS'],
         allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-TRPC-Source'],
+      })
+    )
+
+    // Apply Rate Limiting
+    const { rateLimit } = await import('express-rate-limit')
+    app.use(
+      rateLimit({
+        windowMs: 1 * 60 * 1000, // 1 minute
+        max: 50, // limit each IP to 50 requests per windowMs
+        message: 'Too many requests from this IP, please try again after a minute',
+        standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+        legacyHeaders: false, // Disable the `X-RateLimit-*` headers
       })
     )
 
