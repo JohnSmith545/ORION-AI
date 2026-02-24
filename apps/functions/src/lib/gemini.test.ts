@@ -4,7 +4,7 @@ import { embedTexts, generateGroundedResponse } from './gemini.js'
 // Mock the Google Gen AI SDK
 const mockEmbedContent = vi.fn()
 const mockGenerateContent = vi.fn().mockResolvedValue({
-  text: 'Grounded AI response with citations.',
+  text: JSON.stringify({ text: 'Grounded AI response with citations.', telemetry: null }),
 })
 
 vi.mock('@google/genai', () => ({
@@ -62,9 +62,10 @@ describe('Gemini Adapter', () => {
       const query = 'Tell me about ORION AI'
       const context = [{ text: 'ORION AI uses Vertex AI.', sourceUri: 'https://docs.ai' }]
 
-      const response = await generateGroundedResponse(query, context)
+      const result = await generateGroundedResponse(query, context)
 
-      expect(response).toBe('Grounded AI response with citations.')
+      expect(result.text).toBe('Grounded AI response with citations.')
+      expect(result.telemetry).toBeNull()
     })
   })
 })
