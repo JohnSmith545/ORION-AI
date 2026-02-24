@@ -3,11 +3,11 @@
   "version": "0.0.0",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./schemas": "./src/schemas/index.ts"
+    ".": "./dist/index.js",
+    "./schemas": "./dist/schemas/index.js"
   },
   "scripts": {
-    "build": "tsc --noEmit",
+    "build": "tsc",
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",

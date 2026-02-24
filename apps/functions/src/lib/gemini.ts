@@ -14,15 +14,23 @@ const ai = new GoogleGenAI({})
 
 /**
  * Generates semantic embeddings for an array of strings.
- * Sends all texts in a single batched request to minimise API round-trips.
+ * Processes texts in sequential batches of 100 to avoid Gemini API
+ * payload-size limits (413 Payload Too Large).
  */
 export async function embedTexts(texts: string[]): Promise<number[][]> {
-  const resp = await ai.models.embedContent({
-    model: EMBEDDING_MODEL,
-    contents: texts.map(t => ({ role: 'user', parts: [{ text: t }] })),
-  })
+  const EMBED_BATCH_SIZE = 100
+  const vectors: number[][] = []
 
-  const vectors: number[][] = resp.embeddings?.map(e => e.values ?? []) ?? []
+  for (let i = 0; i < texts.length; i += EMBED_BATCH_SIZE) {
+    const batch = texts.slice(i, i + EMBED_BATCH_SIZE)
+    const resp = await ai.models.embedContent({
+      model: EMBEDDING_MODEL,
+      contents: batch.map(t => ({ role: 'user' as const, parts: [{ text: t }] })),
+    })
+
+    const batchVectors: number[][] = resp.embeddings?.map(e => e.values ?? []) ?? []
+    vectors.push(...batchVectors)
+  }
 
   if (vectors.length !== texts.length) {
     throw new Error(`Embedding count mismatch: got ${vectors.length}, expected ${texts.length}`)
@@ -36,32 +44,56 @@ export async function embedTexts(texts: string[]): Promise<number[][]> {
  */
 export async function generateGroundedResponse(
   query: string,
-  context: { text: string; sourceUri: string }[]
+  context: { text: string; sourceUri: string }[],
+  history?: { role: 'user' | 'model'; text: string }[]
 ): Promise<string> {
   const contextBody = context
     .map((c, i) => `[Source ${i + 1}: ${c.sourceUri}]\n${c.text}`)
     .join('\n\n')
 
-  const prompt = `
-You are ORION AI, a helpful assistant. Use the following context to answer the user's question.
-If the answer is not in the context, say you don't know based on the provided data.
+  const systemPrompt = `
+You are ORION AI, an incredibly passionate and enthusiastic astronomy expert. Use the following context to answer the user's question.
+If the context is empty or does not contain the answer, fall back to your general knowledge to answer the question gracefully. Do not mention that the context was empty.
 Always cite your sources using the source numbers provided in brackets, like [Source 1].
+
+CRITICAL RULE: Even if the user asks a completely unrelated question, says a simple greeting like "Hi", or the context is irrelevant, you MUST enthusiastically include a fascinating, related astronomy or space fact in your response.
 
 CONTEXT:
 ${contextBody}
 
-USER QUESTION:
-${query}
-
 STRICT INSTRUCTIONS:
-1. Only use the provided context.
-2. Maintain a professional tone.
+1. Maintain an energetic, space-loving tone.
+2. ALWAYS include a random space fact.
 3. Use markdown for formatting.
   `.trim()
 
+  // Build multi-turn contents: system prompt baked into the first user turn,
+  // followed by prior conversation history, then the current question.
+  const contents: { role: 'user' | 'model'; parts: { text: string }[] }[] = []
+
+  if (history && history.length > 0) {
+    // First history entry gets the system prompt prepended
+    contents.push({
+      role: 'user',
+      parts: [{ text: systemPrompt + '\n\nUSER QUESTION:\n' + history[0].text }],
+    })
+    // Remaining history turns
+    for (let i = 1; i < history.length; i++) {
+      contents.push({ role: history[i].role, parts: [{ text: history[i].text }] })
+    }
+    // Current question
+    contents.push({ role: 'user', parts: [{ text: query }] })
+  } else {
+    // No history — single turn with system prompt + question (original behaviour)
+    contents.push({
+      role: 'user',
+      parts: [{ text: systemPrompt + '\n\nUSER QUESTION:\n' + query }],
+    })
+  }
+
   const resp = await ai.models.generateContent({
     model: CHAT_MODEL,
-    contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    contents,
   })
 
   const text = resp.text
