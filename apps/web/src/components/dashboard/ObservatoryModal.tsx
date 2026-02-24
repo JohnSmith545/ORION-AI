@@ -1,4 +1,5 @@
 import React from 'react'
+import { createPortal } from 'react-dom'
 import { CelestialTarget } from './DashboardSidebarRight'
 
 interface ObservatoryModalProps {
@@ -14,8 +15,10 @@ export const ObservatoryModal: React.FC<ObservatoryModalProps> = ({ targetData, 
     window.open(`https://images.nasa.gov/search?q=${encodeURIComponent(targetData.name)}`, '_blank')
   }
 
-  return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-8 backdrop-blur-xl bg-black/80">
+  // Use a React Portal to teleport this modal directly to the document.body
+  // This prevents parent containers with overflow-hidden or transforms from trapping the fixed div.
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-8 backdrop-blur-xl bg-black/80">
       {/* HUD Background Grid */}
       <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(0,242,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(0,242,255,0.03)_1px,transparent_1px)] bg-[size:50px_50px]"></div>
 
@@ -85,6 +88,7 @@ export const ObservatoryModal: React.FC<ObservatoryModalProps> = ({ targetData, 
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
