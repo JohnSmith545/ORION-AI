@@ -25,8 +25,22 @@ vi.mock('../../lib/ingest', () => ({
   ingestDocument: vi.fn().mockResolvedValue('doc_1700000000000'),
 }))
 
+// Mock Firestore for the adminProcedure role check
+vi.mock('firebase-admin/firestore', () => ({
+  getFirestore: vi.fn(() => ({
+    collection: vi.fn(() => ({
+      doc: vi.fn(() => ({
+        get: vi.fn().mockResolvedValue({
+          data: () => ({ role: 'admin' }),
+        }),
+      })),
+    })),
+  })),
+}))
+
 const createCaller = createCallerFactory(appRouter)
 const caller = createCaller({})
+const adminCaller = createCaller({ uid: 'admin-user' })
 
 describe('ragRouter', () => {
   afterEach(() => {
@@ -67,7 +81,7 @@ describe('ragRouter', () => {
 
   describe('ingest', () => {
     it('returns success and a docId for a valid URL', async () => {
-      const result = await caller.rag.ingest({
+      const result = await adminCaller.rag.ingest({
         sourceUri: 'https://example.com/doc.pdf',
         sourceType: 'api',
         title: 'Sample Document',
@@ -78,7 +92,7 @@ describe('ragRouter', () => {
     })
 
     it('accepts a valid GCS URI with sourceType gcs', async () => {
-      const result = await caller.rag.ingest({
+      const result = await adminCaller.rag.ingest({
         sourceUri: 'gs://my-bucket/docs/report.pdf',
         sourceType: 'gcs',
         title: 'GCS Document',
