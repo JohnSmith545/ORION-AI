@@ -334,7 +334,7 @@ export const DashboardSidebarLeft: React.FC<DashboardSidebarLeftProps> = ({
   const { role } = useAuth()
 
   return (
-    <aside className="hidden lg:flex w-[220px] shrink-0 h-full glass-panel rounded-xl flex-col justify-between py-6 px-4 relative overflow-hidden shadow-panel-glow">
+    <aside className="hidden lg:flex w-[260px] shrink-0 h-full glass-panel rounded-xl flex-col justify-between py-6 px-4 relative overflow-hidden shadow-panel-glow">
       <DndProvider>
         <div className="space-y-8">
           {/* Role-based primary section */}

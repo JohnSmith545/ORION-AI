@@ -1,11 +1,40 @@
+import { TRPCError } from '@trpc/server'
 import { getFirestore, FieldValue, Timestamp, WriteBatch } from 'firebase-admin/firestore'
 import { getStorage } from 'firebase-admin/storage'
 import { embedTexts } from './gemini.js'
 
 /**
  * Fetches raw text content from an HTTP/HTTPS URL.
+ * Includes SSRF protection to prevent access to internal/private resources.
  */
 export async function fetchContent(url: string): Promise<string> {
+  const parsedUrl = new URL(url)
+
+  // 1. Force HTTPS
+  if (parsedUrl.protocol !== 'https:') {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Invalid protocol. Only HTTPS is allowed for ingestion.',
+    })
+  }
+
+  // 2. Block private/internal IP spaces and GCP metadata server
+  const forbiddenHosts = [
+    /^10\./, // 10.0.0.0/8
+    /^172\.(1[6-9]|2[0-9]|3[0-1])\./, // 172.16.0.0/12
+    /^192\.168\./, // 192.168.0.0/16
+    /^169\.254\./, // 169.254.0.0/16 (Link-local / Metadata)
+    /metadata\.google\.internal/, // GCP Metadata
+  ]
+
+  const hostname = parsedUrl.hostname.toLowerCase()
+  if (forbiddenHosts.some(pattern => pattern.test(hostname))) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Access to the specified host is forbidden (SSRF protection).',
+    })
+  }
+
   const response = await fetch(url)
   if (!response.ok) {
     throw new Error(`Failed to fetch content: ${response.statusText}`)

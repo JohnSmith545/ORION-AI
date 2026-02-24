@@ -19,7 +19,7 @@ export const firestoreVectorStore: IVectorStore = {
     // Without it, the full embedding vector (~24 KB per chunk) would be
     // downloaded and deserialized on every chat query then silently discarded.
     const query = db
-      .collectionGroup('chunks')
+      .collectionGroup('documentChunks') // FIXED: Match the ingested collection name
       .select('text', 'sourceUri')
       .findNearest('embedding', FieldValue.vector(vector), {
         limit,

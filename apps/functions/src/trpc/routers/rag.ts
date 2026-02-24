@@ -1,4 +1,4 @@
-import { publicProcedure, adminProcedure, router } from '../trpc.js'
+import { protectedProcedure, adminProcedure, router } from '../trpc.js'
 import { ChatQuerySchema, IngestDocSchema } from '@repo/shared'
 import { getQueryEmbedding, retrieveContext } from '../../lib/rag.js'
 import { generateGroundedResponse } from '../../lib/gemini.js'
@@ -11,7 +11,7 @@ export const ragRouter = router({
    * 2. Search the database for relevant context chunks
    * 3. Send to Gemini to generate a grounded response
    */
-  chat: publicProcedure.input(ChatQuerySchema).mutation(async ({ input }) => {
+  chat: protectedProcedure.input(ChatQuerySchema).mutation(async ({ input }) => {
     try {
       const { question } = input
 
@@ -22,15 +22,18 @@ export const ragRouter = router({
       const context = await retrieveContext(vector, 3)
 
       // 3. Send to Gemini with conversation history for multi-turn context
-      const { text, telemetry: rawTelemetry } = await generateGroundedResponse(
-        question,
-        context,
-        input.history
-      )
+      const {
+        text,
+        telemetry: rawTelemetry,
+        usedSources,
+      } = await generateGroundedResponse(question, context, input.history)
       let telemetry = rawTelemetry
 
-      // 4. If Gemini flagged this as a complex object, fetch a NASA image
+      // 4. If Gemini flagged this as a complex object, fetch an image (NASA -> Wikipedia fallback)
       if (telemetry?.imageKeyword) {
+        let imageUrl: string | undefined
+
+        // Attempt 1: NASA Image Library
         try {
           const nasaRes = await fetch(
             `https://images-api.nasa.gov/search?q=${encodeURIComponent(telemetry.imageKeyword)}&media_type=image`
@@ -39,20 +42,47 @@ export const ragRouter = router({
             const nasaJson = (await nasaRes.json()) as {
               collection?: { items?: { links?: { href?: string }[] }[] }
             }
-            const imageUrl = nasaJson?.collection?.items?.[0]?.links?.[0]?.href
-            if (imageUrl) {
-              telemetry = { ...telemetry, imageUrl }
-            }
+            imageUrl = nasaJson?.collection?.items?.[0]?.links?.[0]?.href
           }
         } catch {
-          // NASA API failure is non-fatal — frontend falls back to 3D viewer
+          // NASA failed, proceed to fallback
+        }
+
+        // Attempt 2: Wikipedia API Fallback
+        if (!imageUrl) {
+          try {
+            const wikiRes = await fetch(
+              `https://en.wikipedia.org/w/api.php?action=query&prop=pageimages&format=json&piprop=original&titles=${encodeURIComponent(telemetry.imageKeyword)}`
+            )
+            if (wikiRes.ok) {
+              const wikiJson = await wikiRes.json()
+              const pages = wikiJson?.query?.pages
+              if (pages) {
+                // Wikipedia returns dynamic keys for page IDs, so we extract the first one
+                const pageId = Object.keys(pages)[0]
+                if (pageId !== '-1') {
+                  imageUrl = pages[pageId]?.original?.source
+                }
+              }
+            }
+          } catch {
+            // Wikipedia failed, leave imageUrl undefined (frontend falls back to 3D sphere)
+          }
+        }
+
+        if (imageUrl) {
+          telemetry = { ...telemetry, imageUrl }
         }
       }
 
-      // 5. Return exactly what DashboardChatSection expects
+      // 5. Build citations from Gemini's structured usedSources array
+      const citedUris = usedSources
+        .filter(n => n >= 1 && n <= context.length)
+        .map(n => context[n - 1].sourceUri)
+
       return {
         response: text,
-        citations: Array.from(new Set(context.map(c => c.sourceUri))),
+        citations: citedUris.length > 0 ? Array.from(new Set(citedUris)) : undefined,
         telemetry,
       }
     } catch (error) {

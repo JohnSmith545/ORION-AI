@@ -1,5 +1,6 @@
-import React from 'react'
+import { useState } from 'react'
 import { Celestial3DViewer } from './Celestial3DViewer'
+import { ObservatoryModal } from './ObservatoryModal'
 
 export interface CelestialTarget {
   name: string
@@ -17,9 +18,28 @@ interface DashboardSidebarRightProps {
 
 export const DashboardSidebarRight: React.FC<DashboardSidebarRightProps> = ({ targetData }) => {
   const hasTarget = !!targetData
+  const [isModalOpen, setIsModalOpen] = useState(false)
+
+  const is3DObject = targetData?.type
+    ? [
+        'planet',
+        'star',
+        'moon',
+        'satellite',
+        'gas giant',
+        'dwarf',
+        'sun',
+        'terrestrial',
+        'main-sequence',
+        'rocky',
+        'jovian',
+        'ice giant',
+        'exoplanet',
+      ].some(keyword => targetData.type.toLowerCase().includes(keyword))
+    : false
 
   return (
-    <aside className="glass-panel rounded-xl flex flex-col py-6 px-4 relative shadow-panel-glow w-full lg:w-[260px] flex-shrink-0 z-10">
+    <aside className="hidden lg:flex glass-panel rounded-xl flex-col py-6 px-4 relative shadow-panel-glow w-full lg:w-[260px] flex-shrink-0 z-10">
       <div className="space-y-6 flex-1">
         {/* TELEMETRY HEADER */}
         <div>
@@ -36,17 +56,35 @@ export const DashboardSidebarRight: React.FC<DashboardSidebarRightProps> = ({ ta
           <div
             className={`relative h-48 w-48 mx-auto mb-6 mt-4 transition-opacity duration-700 ${hasTarget ? 'opacity-100' : 'opacity-40'}`}
           >
-            {targetData?.imageUrl ? (
-              <img
-                src={targetData.imageUrl}
-                alt={targetData.name}
-                onError={e => {
-                  ;(e.target as HTMLImageElement).style.display = 'none'
-                }}
-                className="absolute inset-8 w-[calc(100%-4rem)] h-[calc(100%-4rem)] rounded-full object-cover mix-blend-screen opacity-90 z-10 border border-primary/30 shadow-[0_0_30px_rgba(0,242,255,0.3)]"
-              />
+            {targetData?.imageUrl && !is3DObject ? (
+              <button
+                onClick={() => setIsModalOpen(true)}
+                className="absolute inset-8 w-[calc(100%-4rem)] h-[calc(100%-4rem)] rounded-full z-10 group overflow-hidden border border-primary/30 shadow-[0_0_30px_rgba(0,242,255,0.3)] transition-transform hover:scale-105"
+              >
+                <img
+                  src={targetData.imageUrl}
+                  alt={targetData.name}
+                  className="w-full h-full object-cover mix-blend-screen opacity-90 group-hover:opacity-100 transition-opacity"
+                  onError={e => {
+                    e.currentTarget.style.display = 'none'
+                  }}
+                />
+                {/* Hover Overlay */}
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]">
+                  <span className="material-symbols-outlined text-primary text-3xl drop-shadow-[0_0_10px_rgba(0,242,255,1)]">
+                    fullscreen
+                  </span>
+                </div>
+              </button>
             ) : (
-              <Celestial3DViewer targetType={targetData?.type} targetName={targetData?.name} />
+              <div className="absolute inset-0 z-10 w-full h-full flex items-center justify-center p-4">
+                <div className="w-full h-full rounded-full overflow-hidden">
+                  <Celestial3DViewer
+                    targetType={targetData?.type || 'planet'}
+                    targetName={targetData?.name || ''}
+                  />
+                </div>
+              </div>
             )}
           </div>
 
@@ -153,6 +191,9 @@ export const DashboardSidebarRight: React.FC<DashboardSidebarRightProps> = ({ ta
           SPECTRAL_SIGNATURE
         </div>
       </div>
+      {isModalOpen && targetData && (
+        <ObservatoryModal targetData={targetData} onClose={() => setIsModalOpen(false)} />
+      )}
     </aside>
   )
 }

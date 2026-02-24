@@ -26,6 +26,7 @@ export const Dashboard: React.FC = () => {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
   const [showWelcome, setShowWelcome] = useState(false)
   const [activeTarget, setActiveTarget] = useState<CelestialTarget | null>(null)
+  const [isOffline, setIsOffline] = useState(!navigator.onLine)
 
   const handleNewChat = useCallback(() => {
     setActiveSessionId(null)
@@ -43,6 +44,20 @@ export const Dashboard: React.FC = () => {
       navigate('/auth', { replace: true })
     }
   }, [user, loading, navigate])
+
+  // Network status detection
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false)
+    const handleOffline = () => setIsOffline(true)
+
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+    }
+  }, [])
 
   // Show welcome modal once per session
   useEffect(() => {
@@ -65,6 +80,32 @@ export const Dashboard: React.FC = () => {
     <DashboardBackground>
       {showWelcome && <DashboardWelcomeModal onClose={handleBeginExploration} />}
       <DashboardHeader />
+      {isOffline && (
+        <div className="absolute inset-0 z-[9999] flex flex-col items-center justify-center bg-black/80 backdrop-blur-md">
+          <div className="text-red-500 mb-6 animate-pulse">
+            <span className="material-symbols-outlined text-7xl drop-shadow-[0_0_15px_rgba(239,68,68,0.8)]">
+              wifi_off
+            </span>
+          </div>
+          <h1 className="text-5xl md:text-7xl font-display font-bold text-red-500 tracking-[0.3em] drop-shadow-[0_0_30px_rgba(239,68,68,0.8)] text-center">
+            SYSTEM OFFLINE
+          </h1>
+          <p className="text-red-400/70 font-mono tracking-widest mt-6 uppercase text-sm animate-pulse text-center">
+            CRITICAL ERROR: Lost connection to orbital network.
+          </p>
+          <div className="mt-8 flex gap-2">
+            <div className="w-2 h-2 bg-red-500 rounded-full animate-ping"></div>
+            <div
+              className="w-2 h-2 bg-red-500 rounded-full animate-ping"
+              style={{ animationDelay: '0.2s' }}
+            ></div>
+            <div
+              className="w-2 h-2 bg-red-500 rounded-full animate-ping"
+              style={{ animationDelay: '0.4s' }}
+            ></div>
+          </div>
+        </div>
+      )}
       <main className="flex-1 min-h-0 w-full max-w-6xl mx-auto flex flex-col lg:flex-row gap-4 px-4 pb-4 overflow-hidden relative z-10">
         <DashboardSidebarLeft
           activeSessionId={activeSessionId}

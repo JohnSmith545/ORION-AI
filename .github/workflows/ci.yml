@@ -60,7 +60,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: 'pnpm'
 
       # ======================================================================
@@ -68,6 +68,12 @@ jobs:
       # ======================================================================
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      # ======================================================================
+      # STEP 4.1: Security Audit
+      # ======================================================================
+      - name: Dependency audit
+        run: pnpm audit --audit-level=high
 
       # ======================================================================
       # STEP 5: Turborepo Cache
