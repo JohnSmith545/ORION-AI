@@ -8,6 +8,7 @@ export interface CelestialTarget {
   dec: string
   distance: string
   description: string
+  imageUrl?: string | null
 }
 
 interface DashboardSidebarRightProps {
@@ -33,9 +34,20 @@ export const DashboardSidebarRight: React.FC<DashboardSidebarRightProps> = ({ ta
 
           {/* 3D HOLO TARGET */}
           <div
-            className={`h-48 w-48 mx-auto mb-6 mt-4 transition-opacity duration-700 ${hasTarget ? 'opacity-100' : 'opacity-40'}`}
+            className={`relative h-48 w-48 mx-auto mb-6 mt-4 transition-opacity duration-700 ${hasTarget ? 'opacity-100' : 'opacity-40'}`}
           >
-            <Celestial3DViewer targetType={targetData?.type} targetName={targetData?.name} />
+            {targetData?.imageUrl ? (
+              <img
+                src={targetData.imageUrl}
+                alt={targetData.name}
+                onError={e => {
+                  ;(e.target as HTMLImageElement).style.display = 'none'
+                }}
+                className="absolute inset-8 w-[calc(100%-4rem)] h-[calc(100%-4rem)] rounded-full object-cover mix-blend-screen opacity-90 z-10 border border-primary/30 shadow-[0_0_30px_rgba(0,242,255,0.3)]"
+              />
+            ) : (
+              <Celestial3DViewer targetType={targetData?.type} targetName={targetData?.name} />
+            )}
           </div>
 
           {/* TARGET DATA */}
