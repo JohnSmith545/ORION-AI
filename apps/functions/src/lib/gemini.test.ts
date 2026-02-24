@@ -7,14 +7,18 @@ const mockGenerateContent = vi.fn().mockResolvedValue({
   text: JSON.stringify({ text: 'Grounded AI response with citations.', telemetry: null }),
 })
 
-vi.mock('@google/genai', () => ({
-  GoogleGenAI: vi.fn().mockImplementation(() => ({
-    models: {
-      embedContent: (...args: unknown[]) => mockEmbedContent(...args),
-      generateContent: (...args: unknown[]) => mockGenerateContent(...args),
-    },
-  })),
-}))
+vi.mock('@google/genai', async importOriginal => {
+  const actual = await importOriginal<typeof import('@google/genai')>()
+  return {
+    ...actual,
+    GoogleGenAI: vi.fn().mockImplementation(() => ({
+      models: {
+        embedContent: (...args: unknown[]) => mockEmbedContent(...args),
+        generateContent: (...args: unknown[]) => mockGenerateContent(...args),
+      },
+    })),
+  }
+})
 
 describe('Gemini Adapter', () => {
   afterEach(() => {

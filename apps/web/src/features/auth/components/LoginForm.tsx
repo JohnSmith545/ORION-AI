@@ -1,18 +1,27 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { auth, db } from '../../../lib/firebase'
-import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth'
+import {
+  signInWithEmailAndPassword,
+  GoogleAuthProvider,
+  signInWithPopup,
+  setPersistence,
+  browserLocalPersistence,
+  browserSessionPersistence,
+} from 'firebase/auth'
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
 
 interface LoginFormProps {
   onProgressChange?: (progress: number) => void
+  onRecoverClick?: () => void
 }
 
-export const LoginForm: React.FC<LoginFormProps> = ({ onProgressChange }) => {
+export const LoginForm: React.FC<LoginFormProps> = ({ onProgressChange, onRecoverClick }) => {
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [keepSession, setKeepSession] = useState(true)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -22,6 +31,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onProgressChange }) => {
     setError(null)
 
     try {
+      await setPersistence(auth, keepSession ? browserLocalPersistence : browserSessionPersistence)
       const userCredential = await signInWithEmailAndPassword(auth, email, password)
       const user = userCredential.user
 
@@ -57,6 +67,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onProgressChange }) => {
     setLoading(true)
     setError(null)
     try {
+      await setPersistence(auth, keepSession ? browserLocalPersistence : browserSessionPersistence)
       const result = await signInWithPopup(auth, provider)
       const user = result.user
 
@@ -156,17 +167,20 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onProgressChange }) => {
             <input
               className="w-3.5 h-3.5 rounded border-white/20 bg-white/5 text-primary focus:ring-offset-0 focus:ring-primary/50 transition-all checked:bg-primary"
               type="checkbox"
+              checked={keepSession}
+              onChange={e => setKeepSession(e.target.checked)}
             />
             <span className="text-xs md:text-sm text-white/40 group-hover:text-white/60 transition-colors font-light">
               Keep session active
             </span>
           </label>
-          <a
+          <button
             className="text-xs md:text-sm text-primary/70 hover:text-primary transition-colors font-light tracking-wide hover:shadow-[0_0_8px_rgba(0,242,255,0.4)]"
-            href="#"
+            onClick={onRecoverClick}
+            type="button"
           >
             Recover Access?
-          </a>
+          </button>
         </div>
 
         <button
@@ -209,20 +223,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onProgressChange }) => {
           </span>
         </button>
       </form>
-
-      <div className="mt-5 pt-4 border-t border-white/5 flex flex-col items-center gap-3">
-        <p className="text-xs md:text-sm text-white/30 font-light uppercase tracking-widest">
-          Or authenticate via quantum link
-        </p>
-        <div className="flex gap-4">
-          <button className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 hover:border-white/20 hover:shadow-[0_0_10px_rgba(255,255,255,0.1)] transition-all">
-            <span className="material-symbols-outlined text-lg text-white/60">hub</span>
-          </button>
-          <button className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 hover:border-white/20 hover:shadow-[0_0_10px_rgba(255,255,255,0.1)] transition-all">
-            <span className="material-symbols-outlined text-lg text-white/60">fingerprint</span>
-          </button>
-        </div>
-      </div>
     </div>
   )
 }
