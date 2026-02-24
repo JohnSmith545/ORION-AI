@@ -22,7 +22,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
   const glowShadow = `0 0 ${20 + progress * 60}px rgba(${progress > 0.5 ? '139, 92, 246' : '0, 242, 255'}, ${0.1 + progress * 0.4})`
   return (
     <>
-      <div className="text-center mb-8 md:mb-12 relative">
+      <div className="text-center mb-4 md:mb-8 relative">
         <div className="inline-flex items-center justify-center mb-2 relative">
           <span className="material-symbols-outlined text-6xl font-thin relative z-10 drop-shadow-[0_0_15px_rgba(0,242,255,0.6)] text-primary">
             blur_on
@@ -51,9 +51,9 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
         {children}
       </div>
 
-      {footer && <div className="mt-8 text-center">{footer}</div>}
+      {footer && <div className="mt-6 text-center">{footer}</div>}
 
-      <div className="absolute -bottom-16 left-1/2 -translate-x-1/2 w-full text-center">
+      <div className="mt-6 text-center">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-black/40 border border-white/5 backdrop-blur-sm">
           <span className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_5px_#22c55e] animate-pulse"></span>
           <span className="text-[9px] font-mono text-white/40 uppercase tracking-widest">
