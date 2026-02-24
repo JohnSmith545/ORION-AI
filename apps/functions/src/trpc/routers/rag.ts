@@ -22,12 +22,13 @@ export const ragRouter = router({
       const context = await retrieveContext(vector, 3)
 
       // 3. Send to Gemini with conversation history for multi-turn context
-      const response = await generateGroundedResponse(question, context, input.history)
+      const { text, telemetry } = await generateGroundedResponse(question, context, input.history)
 
       // 4. Return exactly what DashboardChatSection expects
       return {
-        response,
+        response: text,
         citations: Array.from(new Set(context.map(c => c.sourceUri))),
+        telemetry,
       }
     } catch (error) {
       throw new Error(error instanceof Error ? error.message : 'Failed to generate AI response')
