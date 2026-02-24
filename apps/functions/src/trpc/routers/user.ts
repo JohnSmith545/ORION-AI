@@ -77,14 +77,16 @@ export const userRouter = router({
       .limit(50)
       .get()
 
-    return snapshot.docs.map(doc => {
-      const data = doc.data()
-      return {
-        id: doc.id,
-        title: data.title ?? 'Untitled Session',
-        updatedAt: data.updatedAt?.toDate?.()?.toISOString() ?? new Date().toISOString(),
-      }
-    })
+    return snapshot.docs
+      .filter(doc => !doc.data().archiveFolderId)
+      .map(doc => {
+        const data = doc.data()
+        return {
+          id: doc.id,
+          title: data.title ?? 'Untitled Session',
+          updatedAt: data.updatedAt?.toDate?.()?.toISOString() ?? new Date().toISOString(),
+        }
+      })
   }),
 
   // ── Create a new chat session with initial messages ─────────────────
@@ -181,4 +183,211 @@ export const userRouter = router({
     await docRef.delete()
     return { success: true }
   }),
+
+  // ── Archive Folders ───────────────────────────────────────────────────
+
+  getArchiveFolders: protectedProcedure.query(async ({ ctx }) => {
+    const { getFirestore } = await import('firebase-admin/firestore')
+    const db = getFirestore()
+
+    // Query without orderBy to avoid requiring a composite index
+    const foldersSnap = await db.collection('archiveFolders').where('userId', '==', ctx.uid).get()
+
+    // Count archived sessions per folder — gracefully handle missing index
+    let counts: Record<string, number> = {}
+    try {
+      const sessionsSnap = await db
+        .collection('chatSessions')
+        .where('userId', '==', ctx.uid)
+        .where('archiveFolderId', '!=', null)
+        .select('archiveFolderId')
+        .get()
+
+      for (const doc of sessionsSnap.docs) {
+        const fid = doc.data().archiveFolderId as string
+        counts[fid] = (counts[fid] ?? 0) + 1
+      }
+    } catch {
+      counts = {}
+    }
+
+    const folders = foldersSnap.docs.map(doc => {
+      const data = doc.data()
+      return {
+        id: doc.id,
+        name: data.name as string,
+        sessionCount: counts[doc.id] ?? 0,
+        createdAt: data.createdAt?.toDate?.()?.toISOString() ?? new Date().toISOString(),
+        updatedAt: data.updatedAt?.toDate?.()?.toISOString() ?? new Date().toISOString(),
+      }
+    })
+
+    // Sort newest-first in JS instead of requiring a Firestore composite index
+    folders.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+    return folders
+  }),
+
+  createFolder: protectedProcedure.input(CreateFolderSchema).mutation(async ({ ctx, input }) => {
+    const { getFirestore, FieldValue } = await import('firebase-admin/firestore')
+    const now = FieldValue.serverTimestamp()
+
+    const docRef = await getFirestore().collection('archiveFolders').add({
+      userId: ctx.uid,
+      name: input.name,
+      createdAt: now,
+      updatedAt: now,
+    })
+
+    return { folderId: docRef.id }
+  }),
+
+  renameFolder: protectedProcedure.input(RenameFolderSchema).mutation(async ({ ctx, input }) => {
+    const { getFirestore, FieldValue } = await import('firebase-admin/firestore')
+    const docRef = getFirestore().collection('archiveFolders').doc(input.folderId)
+    const doc = await docRef.get()
+    const data = doc.data()
+
+    if (!data || data.userId !== ctx.uid) {
+      throw new (await import('@trpc/server')).TRPCError({
+        code: 'NOT_FOUND',
+        message: 'Folder not found',
+      })
+    }
+
+    await docRef.update({
+      name: input.name,
+      updatedAt: FieldValue.serverTimestamp(),
+    })
+
+    return { success: true }
+  }),
+
+  deleteFolder: protectedProcedure.input(DeleteFolderSchema).mutation(async ({ ctx, input }) => {
+    const { getFirestore, FieldValue } = await import('firebase-admin/firestore')
+    const db = getFirestore()
+    const folderRef = db.collection('archiveFolders').doc(input.folderId)
+    const folderDoc = await folderRef.get()
+    const folderData = folderDoc.data()
+
+    if (!folderData || folderData.userId !== ctx.uid) {
+      throw new (await import('@trpc/server')).TRPCError({
+        code: 'NOT_FOUND',
+        message: 'Folder not found',
+      })
+    }
+
+    // Unarchive all sessions in this folder, then delete the folder
+    const sessionsSnap = await db
+      .collection('chatSessions')
+      .where('userId', '==', ctx.uid)
+      .where('archiveFolderId', '==', input.folderId)
+      .get()
+
+    const batch = db.batch()
+    for (const sessionDoc of sessionsSnap.docs) {
+      batch.update(sessionDoc.ref, {
+        archiveFolderId: null,
+        updatedAt: FieldValue.serverTimestamp(),
+      })
+    }
+    batch.delete(folderRef)
+    await batch.commit()
+
+    return { success: true }
+  }),
+
+  archiveSession: protectedProcedure
+    .input(ArchiveSessionSchema)
+    .mutation(async ({ ctx, input }) => {
+      const { getFirestore, FieldValue } = await import('firebase-admin/firestore')
+      const db = getFirestore()
+
+      const sessionRef = db.collection('chatSessions').doc(input.sessionId)
+      const sessionDoc = await sessionRef.get()
+      const sessionData = sessionDoc.data()
+
+      if (!sessionData || sessionData.userId !== ctx.uid) {
+        throw new (await import('@trpc/server')).TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Session not found',
+        })
+      }
+
+      const folderRef = db.collection('archiveFolders').doc(input.folderId)
+      const folderDoc = await folderRef.get()
+      const folderData = folderDoc.data()
+
+      if (!folderData || folderData.userId !== ctx.uid) {
+        throw new (await import('@trpc/server')).TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Folder not found',
+        })
+      }
+
+      await sessionRef.update({
+        archiveFolderId: input.folderId,
+        updatedAt: FieldValue.serverTimestamp(),
+      })
+
+      return { success: true }
+    }),
+
+  unarchiveSession: protectedProcedure
+    .input(UnarchiveSessionSchema)
+    .mutation(async ({ ctx, input }) => {
+      const { getFirestore, FieldValue } = await import('firebase-admin/firestore')
+      const sessionRef = getFirestore().collection('chatSessions').doc(input.sessionId)
+      const sessionDoc = await sessionRef.get()
+      const sessionData = sessionDoc.data()
+
+      if (!sessionData || sessionData.userId !== ctx.uid) {
+        throw new (await import('@trpc/server')).TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Session not found',
+        })
+      }
+
+      await sessionRef.update({
+        archiveFolderId: null,
+        updatedAt: FieldValue.serverTimestamp(),
+      })
+
+      return { success: true }
+    }),
+
+  getArchivedSessions: protectedProcedure
+    .input(z.object({ folderId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const { getFirestore } = await import('firebase-admin/firestore')
+      const db = getFirestore()
+
+      // Verify folder ownership
+      const folderDoc = await db.collection('archiveFolders').doc(input.folderId).get()
+      const folderData = folderDoc.data()
+
+      if (!folderData || folderData.userId !== ctx.uid) {
+        throw new (await import('@trpc/server')).TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Folder not found',
+        })
+      }
+
+      const snapshot = await db
+        .collection('chatSessions')
+        .where('userId', '==', ctx.uid)
+        .where('archiveFolderId', '==', input.folderId)
+        .get()
+
+      const sessions = snapshot.docs.map(doc => {
+        const data = doc.data()
+        return {
+          id: doc.id,
+          title: data.title ?? 'Untitled Session',
+          updatedAt: data.updatedAt?.toDate?.()?.toISOString() ?? new Date().toISOString(),
+        }
+      })
+
+      sessions.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+      return sessions
+    }),
 })
