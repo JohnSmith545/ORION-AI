@@ -7,5 +7,8 @@
  * Vertex AI Vector Search (or a test double) without touching core logic.
  */
 export interface IVectorStore {
-  findNearest(vector: number[], limit: number): Promise<{ text: string; sourceUri: string }[]>
+  findNearest(
+    vector: number[],
+    limit: number
+  ): Promise<{ text: string; sourceUri: string; distance?: number }[]>
 }
