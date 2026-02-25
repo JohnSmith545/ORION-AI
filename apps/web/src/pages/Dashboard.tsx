@@ -123,3 +123,5 @@ export const Dashboard: React.FC = () => {
     </DashboardBackground>
   )
 }
+
+export default Dashboard
