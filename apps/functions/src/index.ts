@@ -27,6 +27,21 @@ export const api = onRequest({ maxInstances: 10 }, async (req, res) => {
     }
 
     const app = express()
+    const { default: helmet } = await import('helmet')
+
+    // Apply security headers
+    app.use(
+      helmet({
+        contentSecurityPolicy: {
+          directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "'unsafe-inline'"],
+            objectSrc: ["'none'"],
+            upgradeInsecureRequests: [],
+          },
+        },
+      })
+    )
 
     // Trust proxy is required for rate limiting to correctly identify client IPs behind Firebase proxy
     app.set('trust proxy', 1)

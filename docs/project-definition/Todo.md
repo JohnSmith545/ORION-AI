@@ -136,7 +136,7 @@
   - [x] Implement SSRF protection for user-submitted URIs (HTTPS-only, private IP blocking).
   - [ ] Add file size limit to `ChatQuerySchema.files` base64 data (~10 MB max).
   - [ ] Add MIME type allowlist for file attachments (`image/png`, `image/jpeg`, `image/webp`, `application/pdf`).
-  - [ ] Add Content Security Policy (CSP) headers.
+  - [x] Add Content Security Policy (CSP) headers.
   - [ ] Set up automated dependency vulnerability scanning (`pnpm audit` in CI).
 
 ---
