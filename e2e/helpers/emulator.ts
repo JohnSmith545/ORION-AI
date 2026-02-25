@@ -54,10 +54,7 @@ export async function createEmulatorUser(
  * Clears all accounts from the Firebase Auth Emulator.
  */
 export async function clearAuthEmulator(): Promise<void> {
-  await fetch(
-    `${AUTH_EMULATOR}/emulator/v1/projects/${PROJECT_ID}/accounts`,
-    { method: 'DELETE' }
-  )
+  await fetch(`${AUTH_EMULATOR}/emulator/v1/projects/${PROJECT_ID}/accounts`, { method: 'DELETE' })
 }
 
 /**

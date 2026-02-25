@@ -14,6 +14,9 @@ importers:
       '@playwright/test':
         specifier: ^1.58.2
         version: 1.58.2
+      '@repo/eslint-config':
+        specifier: workspace:^
+        version: link:packages/eslint-config
       eslint:
         specifier: ^8.57.0
         version: 8.57.0

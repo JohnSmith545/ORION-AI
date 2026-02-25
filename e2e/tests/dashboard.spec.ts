@@ -1,4 +1,4 @@
-import { test, expect, resetEmulators } from '../fixtures/auth.fixture'
+import { test, expect } from '../fixtures/auth.fixture'
 
 /**
  * Dashboard Page E2E Tests
@@ -21,14 +21,6 @@ test.describe('Dashboard Page', () => {
   test.beforeEach(async () => {
     const available = await isEmulatorRunning()
     expect(available).toBe(true)
-  })
-
-  test.afterAll(async () => {
-    try {
-      await resetEmulators()
-    } catch {
-      // Emulators may not be running
-    }
   })
 
   test('should redirect unauthenticated user to auth page', async ({ page }) => {
@@ -69,14 +61,16 @@ test.describe('Dashboard Page', () => {
   })
 
   test('should display sidebar navigation', async ({ page, testUser, loginAs }) => {
+    // Force a wide viewport so the sidebar (hidden lg:flex) is visible
+    await page.setViewportSize({ width: 1280, height: 720 })
     await loginAs(page, testUser.email, testUser.password)
     const beginBtn = page.getByRole('button', { name: /begin exploration/i })
     if (await beginBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
       await beginBtn.click()
     }
     await expect(page.locator('main')).toBeVisible({ timeout: 10000 })
-    const mainChildren = page.locator('main > *')
-    const count = await mainChildren.count()
-    expect(count).toBeGreaterThanOrEqual(2)
+    // Assert that the sidebar aside and chat section are both rendered inside main
+    await expect(page.locator('main > aside').first()).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('main > section').first()).toBeVisible({ timeout: 10000 })
   })
 })

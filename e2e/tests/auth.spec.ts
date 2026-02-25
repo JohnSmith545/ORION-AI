@@ -1,4 +1,4 @@
-import { test, expect, resetEmulators, TEST_USER } from '../fixtures/auth.fixture'
+import { test, expect } from '../fixtures/auth.fixture'
 
 /**
  * Auth Page E2E Tests
@@ -9,14 +9,6 @@ import { test, expect, resetEmulators, TEST_USER } from '../fixtures/auth.fixtur
  */
 
 test.describe('Auth Page', () => {
-  test.afterAll(async () => {
-    try {
-      await resetEmulators()
-    } catch {
-      // Emulators may not be running
-    }
-  })
-
   // ── UI Tests (no emulator needed) ────────────────────────────────
 
   test('should display the login form with email and password fields', async ({ page }) => {
