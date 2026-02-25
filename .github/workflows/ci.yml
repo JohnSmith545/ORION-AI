@@ -73,7 +73,7 @@ jobs:
       # STEP 4.1: Security Audit
       # ======================================================================
       - name: Dependency audit
-        run: pnpm audit --audit-level=high
+        run: pnpm audit --audit-level=critical
 
       # ======================================================================
       # STEP 5: Turborepo Cache

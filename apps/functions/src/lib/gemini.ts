@@ -142,13 +142,18 @@ CITATION & CONTEXT RULES:
 - IF IRRELEVANT (false): COMPLETELY IGNORE THE CONTEXT. Answer using your own built-in knowledge.
 - IF ANALYZING AN IMAGE OR PDF: You MUST cross-reference your visual analysis with the CONTEXT provided to give the most accurate, grounded answer. Do not ignore the context!
 
-THE SPACE PIVOT RULE:
-- If the user asks about an astronomical topic, answer directly and concisely. Do NOT overshare unnecessary facts.
-- If the user asks a completely NON-SPACE related question, answer politely, then pivot with a brief (1-2 sentences max) space fact to steer the conversation back.
+FUN FACTS & PIVOT RULE:
+- If you include a fun fact, it MUST be extremely brief (1 sentence max) and STRICTLY related to the user's primary query.
+- If there is no directly related fun fact, DO NOT include one. 
+- If the user asks a completely NON-SPACE related question, answer politely, then pivot with a brief, related space fact to steer the conversation back.
+
+FORMATTING RULE (CRITICAL):
+- DO NOT write giant walls of text. 
+- Use beautiful Markdown formatting: utilize **bold text** for key terms, use bullet points for lists, and keep paragraphs short and punchy to make the data easy to read.
 
 TELEMETRY EXTRACTION RULE: 
 - You MUST extract telemetry data specifically for the PRIMARY SUBJECT of the user's question or the uploaded image.
-- CRITICAL: Do NOT extract telemetry for the secondary "fun fact" or pivot topic. The telemetry must match what the user is actually asking about! Set to null ONLY if the user is asking a non-space question.
+- CRITICAL: Do NOT extract telemetry for the secondary "fun fact". The telemetry must match what the user is actually asking about! Set to null ONLY if the user is asking a non-space question.
 
 CONTEXT:
 ${contextBody}
@@ -156,7 +161,7 @@ ${contextBody}
 
   // Build the current turn parts — text first, then optional file attachment
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const currentTurnParts: any[] = [{ text: systemPrompt + '\n\nUSER QUESTION:\n' + query }]
+  const currentTurnParts: any[] = [{ text: query }]
 
   // Inject multiple files
   if (files && files.length > 0) {
@@ -167,27 +172,22 @@ ${contextBody}
     })
   }
 
-  // Build multi-turn contents: history is passed exactly as it occurred,
-  // and the system prompt (with CURRENT context) is prepended to the CURRENT question.
+  // Build multi-turn contents: history is passed exactly as it occurred.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const contents: { role: 'user' | 'model'; parts: any[] }[] = []
 
   if (history && history.length > 0) {
-    // Push the history exactly as it occurred
     for (let i = 0; i < history.length; i++) {
       contents.push({ role: history[i].role, parts: [{ text: history[i].text }] })
     }
-    // Append current turn with system prompt + question + optional file
-    contents.push({ role: 'user', parts: currentTurnParts })
-  } else {
-    // No history — single turn with system prompt + question + optional file
-    contents.push({ role: 'user', parts: currentTurnParts })
   }
+  contents.push({ role: 'user', parts: currentTurnParts })
 
   const resp = await ai.models.generateContent({
     model: CHAT_MODEL,
     contents,
     config: {
+      systemInstruction: systemPrompt,
       responseMimeType: 'application/json',
       responseSchema: RESPONSE_SCHEMA,
     },
