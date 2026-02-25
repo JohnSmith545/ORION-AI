@@ -100,7 +100,7 @@ export async function saveToFirestore(
   embeddings: number[][]
 ): Promise<void> {
   const db = getFirestore()
-  const docRef = db.collection('docs').doc(docId)
+  const docRef = db.collection('documentChunks').doc(docId)
 
   // 1. Save main document metadata
   await docRef.set({
