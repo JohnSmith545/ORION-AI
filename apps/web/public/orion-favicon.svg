@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#1a1a2e"/>
+      <stop offset="100%" stop-color="#050510"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#00d4ff" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#00d4ff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="star" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00d4ff"/>
+      <stop offset="100%" stop-color="#7b2ff7"/>
+    </linearGradient>
+    <linearGradient id="ring" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00d4ff" stop-opacity="0.8"/>
+      <stop offset="50%" stop-color="#7b2ff7" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#00d4ff" stop-opacity="0.8"/>
+    </linearGradient>
+  </defs>
+  <!-- Background circle -->
+  <circle cx="32" cy="32" r="32" fill="url(#bg)"/>
+  <!-- Outer glow -->
+  <circle cx="32" cy="32" r="28" fill="url(#glow)"/>
+  <!-- Orion belt - 3 stars -->
+  <circle cx="22" cy="28" r="2.5" fill="url(#star)"/>
+  <circle cx="32" cy="32" r="3" fill="url(#star)"/>
+  <circle cx="42" cy="36" r="2.5" fill="url(#star)"/>
+  <!-- Star glow effects -->
+  <circle cx="22" cy="28" r="5" fill="#00d4ff" opacity="0.15"/>
+  <circle cx="32" cy="32" r="6" fill="#00d4ff" opacity="0.15"/>
+  <circle cx="42" cy="36" r="5" fill="#00d4ff" opacity="0.15"/>
+  <!-- Connecting lines (constellation) -->
+  <line x1="22" y1="28" x2="32" y2="32" stroke="url(#ring)" stroke-width="0.8" opacity="0.6"/>
+  <line x1="32" y1="32" x2="42" y2="36" stroke="url(#ring)" stroke-width="0.8" opacity="0.6"/>
+  <!-- Outer shoulder/foot stars -->
+  <circle cx="18" cy="18" r="1.5" fill="#ffffff" opacity="0.7"/>
+  <circle cx="46" cy="18" r="1.5" fill="#ffffff" opacity="0.7"/>
+  <circle cx="16" cy="46" r="1.5" fill="#ffffff" opacity="0.7"/>
+  <circle cx="48" cy="46" r="1.5" fill="#ffffff" opacity="0.7"/>
+  <!-- Faint constellation lines to shoulders/feet -->
+  <line x1="18" y1="18" x2="22" y2="28" stroke="#ffffff" stroke-width="0.4" opacity="0.25"/>
+  <line x1="46" y1="18" x2="42" y2="36" stroke="#ffffff" stroke-width="0.4" opacity="0.25"/>
+  <line x1="16" y1="46" x2="22" y2="28" stroke="#ffffff" stroke-width="0.4" opacity="0.25"/>
+  <line x1="48" y1="46" x2="42" y2="36" stroke="#ffffff" stroke-width="0.4" opacity="0.25"/>
+  <!-- Orbital ring -->
+  <ellipse cx="32" cy="32" rx="26" ry="10" fill="none" stroke="url(#ring)" stroke-width="0.6" transform="rotate(-25 32 32)" opacity="0.4"/>
+  <!-- Tiny ambient stars -->
+  <circle cx="10" cy="12" r="0.5" fill="#ffffff" opacity="0.4"/>
+  <circle cx="52" cy="8" r="0.5" fill="#ffffff" opacity="0.3"/>
+  <circle cx="8" cy="38" r="0.5" fill="#ffffff" opacity="0.35"/>
+  <circle cx="55" cy="30" r="0.5" fill="#ffffff" opacity="0.4"/>
+  <circle cx="28" cy="10" r="0.5" fill="#ffffff" opacity="0.3"/>
+  <circle cx="38" cy="54" r="0.5" fill="#ffffff" opacity="0.35"/>
+</svg>

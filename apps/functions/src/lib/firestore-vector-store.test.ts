@@ -3,8 +3,20 @@ import { firestoreVectorStore } from './firestore-vector-store.js'
 
 // Mock Firestore with chained query builder
 const mockDocs = [
-  { data: () => ({ text: 'Chunk about stars', sourceUri: 'https://docs.ai/stars' }) },
-  { data: () => ({ text: 'Chunk about planets', sourceUri: 'https://docs.ai/planets' }) },
+  {
+    data: () => ({
+      text: 'Chunk about stars',
+      sourceUri: 'https://docs.ai/stars',
+      vector_distance: 0.12,
+    }),
+  },
+  {
+    data: () => ({
+      text: 'Chunk about planets',
+      sourceUri: 'https://docs.ai/planets',
+      vector_distance: 0.34,
+    }),
+  },
 ]
 
 const mockGet = vi.fn().mockResolvedValue({ docs: mockDocs })
@@ -34,7 +46,7 @@ describe('firestoreVectorStore', () => {
 
     it('should select only "text" and "sourceUri" fields', async () => {
       await firestoreVectorStore.findNearest([0.1, 0.2], 5)
-      expect(mockSelect).toHaveBeenCalledWith('text', 'sourceUri')
+      expect(mockSelect).toHaveBeenCalledWith('text', 'sourceUri', 'vector_distance')
     })
 
     it('should use COSINE distance measure with the provided vector and limit', async () => {
@@ -44,6 +56,7 @@ describe('firestoreVectorStore', () => {
       expect(mockFindNearest).toHaveBeenCalledWith('embedding', vector, {
         limit: 3,
         distanceMeasure: 'COSINE',
+        distanceResultField: 'vector_distance',
       })
     })
 
@@ -51,8 +64,8 @@ describe('firestoreVectorStore', () => {
       const results = await firestoreVectorStore.findNearest([0.1], 5)
 
       expect(results).toEqual([
-        { text: 'Chunk about stars', sourceUri: 'https://docs.ai/stars' },
-        { text: 'Chunk about planets', sourceUri: 'https://docs.ai/planets' },
+        { text: 'Chunk about stars', sourceUri: 'https://docs.ai/stars', distance: 0.12 },
+        { text: 'Chunk about planets', sourceUri: 'https://docs.ai/planets', distance: 0.34 },
       ])
     })
 

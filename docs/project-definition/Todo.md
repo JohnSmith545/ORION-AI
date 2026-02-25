@@ -34,6 +34,12 @@
 - [x] **Firestore Storage**
   - [x] 🔴 Write Test: Verify batch write to `docs` and `docs/{id}/chunks` sub-collections.
   - [x] 🟢 Implement: `src/lib/ingest.ts` -> `saveToFirestore(doc, chunks)`.
+- [x] **Redundancy Prevention**
+  - [x] Implement `findNearest` distance-score return in `IVectorStore` and `FirestoreVectorStore`.
+  - [x] Add similarity-threshold check (> 0.95) in `saveToFirestore` to skip semantically duplicate chunks.
+- [x] **Batch Processing**
+  - [x] Chunk Firestore batch writes into groups of 450.
+  - [x] Batch Gemini embedding requests in groups of 100 to avoid payload limits.
 
 ---
 
@@ -50,6 +56,12 @@
 - [x] **Grounding & Generation**
   - [x] 🔴 Write Test: Verify prompt template includes retrieved context and instructions.
   - [x] 🟢 Implement: `src/lib/gemini.ts` -> `generateGroundedResponse(query, context)`.
+- [x] **Telemetry Generation**
+  - [x] Gemini system prompt generates structured telemetry (coordinates, distance, type, imageKeyword) for all astronomical topics.
+  - [x] Telemetry schema supports general concepts with `N/A`/`UNIVERSAL` fallbacks.
+- [x] **NASA Image Integration**
+  - [x] Fetch celestial imagery from NASA Image Library API using telemetry `imageKeyword`.
+  - [x] Wikipedia fallback for images when NASA returns no results.
 - [x] **tRPC Procedure**
   - [x] 🔴 Write Test: Integration test for `chat` mutation (Red-Green-Refactor).
   - [x] 🟢 Implement: `apps/functions/src/trpc/routers/rag.ts` -> `chat` procedure.
@@ -82,25 +94,65 @@
 **Goal:** A premium, responsive chat experience.
 
 - [x] **Core Chat Component**
-  - [x] 🟢 Implement: `apps/web/src/components/dashboard/DashboardChatSection.tsx` — full message list with user/assistant roles, state management, typing indicator, auto-scroll, and chat history via tRPC mutation.
+  - [x] 🟢 Implement: `DashboardChatSection.tsx` — full message list with user/assistant roles, state management, typing indicator, auto-scroll, and chat history via tRPC mutation.
 - [x] **Markdown Rendering**
-  - [x] Task: Custom `renderMarkdown()` in `DashboardChatSection.tsx` — renders **bold**, bullet lists, numbered lists, and paragraphs.
+  - [x] Custom `renderMarkdown()` — renders **bold**, bullet lists, numbered lists, and paragraphs.
 - [x] **Citation System**
-  - [x] Task: Source links displayed under each assistant message in a "Sources" section with citation URIs from RAG responses.
+  - [x] Source links displayed under each assistant message in a "Sources" section with citation URIs from RAG responses.
 - [x] **Admin Dash**
-  - [x] Task: `AdminIngestPanel` in `DashboardSidebarLeft.tsx` — URI input, title field, API/GCS source type selector, ingestion status/error feedback, and role-gated visibility (admin only).
+  - [x] `AdminIngestPanel` in `DashboardSidebarLeft.tsx` — URI input, title field, API/GCS source type selector, ingestion status/error feedback, and role-gated visibility (admin only).
+- [x] **Multimodal Chat**
+  - [x] File attachment support (PDFs & images) via Gemini `inlineData`.
+  - [x] Frontend file upload UI with drag-and-drop / click-to-attach.
+- [x] **Voice Input**
+  - [x] Native Web Speech API (client-side) for voice-to-text input.
+  - [x] Audio visualiser with red glow UI effect during dictation.
+- [x] **AI Welcome Greeting**
+  - [x] Female AI voice greeting ("Welcome to Orion A.I.") on first dashboard load using `speechSynthesis`.
+  - [x] Session-gated to play once per session.
+- [x] **3D Celestial Viewer**
+  - [x] `Celestial3DViewer.tsx` — React Three Fiber component rendering rotating celestial bodies.
+  - [x] Hybrid 3D/2D Holo-Target system on `DashboardSidebarRight.tsx` (3D spheres for planets/stars, NASA images for complex objects).
+- [x] **Observatory Modal**
+  - [x] `ObservatoryModal.tsx` — detailed telemetry display with NASA Archives link.
+- [x] **Responsive Layout**
+  - [x] Mobile-optimised dashboard — left/right sidebars hidden on small screens; chat fills available space.
 
 ---
 
-### Phase 5: Verification & Launch
+### Phase 5: Security
+
+**Goal:** Harden the application against common vulnerabilities.
+
+- [x] **Firestore Security Rules**
+  - [x] `docs` and `chunks` collections locked to `allow read, write: if false` (Admin SDK only).
+  - [x] `users/{userId}` scoped to `request.auth.uid == userId`.
+  - [x] `chatSessions` and `archiveFolders` owner-scoped with auth checks on read/write/create.
+  - [x] Catch-all deny rule for all other paths.
+- [x] **Security Audit**
+  - [x] Comprehensive post-remediation audit covering backend, client-side, database rules, and dependency security.
+- [ ] **Remaining Security Tasks**
+  - [x] Add rate-limiting middleware — 50 req/min via `express-rate-limit` in `index.ts`.
+  - [x] Implement SSRF protection for user-submitted URIs (HTTPS-only, private IP blocking).
+  - [ ] Add file size limit to `ChatQuerySchema.files` base64 data (~10 MB max).
+  - [ ] Add MIME type allowlist for file attachments (`image/png`, `image/jpeg`, `image/webp`, `application/pdf`).
+  - [ ] Add Content Security Policy (CSP) headers.
+  - [ ] Set up automated dependency vulnerability scanning (`pnpm audit` in CI).
+
+---
+
+### Phase 6: Verification & Launch
 
 **Goal:** Production readiness and quality assurance.
 
 - [ ] **Automated Testing**
-  - [x] Task: Unit tests for adapters — `gemini.test.ts`, `ingest.test.ts`, `rag.test.ts`, `rag.test.ts` (router), `user.test.ts` (router), `rag.test.ts` (schema), `user.test.ts` (schema). _(Coverage may not be 100%.)_
-  - [ ] Task: Playwright E2E tests (Ingest -> Chat -> Verify Answer).
+  - [x] Unit tests for adapters — `gemini.test.ts`, `ingest.test.ts`, `rag.test.ts`, `rag.test.ts` (router), `user.test.ts` (router), `rag.test.ts` (schema), `user.test.ts` (schema). _(Coverage may not be 100%.)_
+  - [ ] Playwright E2E tests (Ingest -> Chat -> Verify Answer).
 - [ ] **Observability**
-  - [ ] Task: Add structured logging for retrieval similarity scores and LLM latency.
+  - [ ] Add structured logging for retrieval similarity scores and LLM latency.
 - [ ] **Deployment**
-  - [x] Task: Deploy to production via GitHub Actions (`ci.yml`, `deploy-dev.yml`, `deploy-stage.yml`, `deploy-main.yml`, `release.yml`).
-  - [ ] Task: Final A11y and performance audit.
+  - [x] Deploy to production via GitHub Actions (`ci.yml`, `deploy-dev.yml`, `deploy-stage.yml`, `deploy-main.yml`, `release.yml`).
+  - [ ] Final A11y and performance audit.
+- [ ] **Performance Optimisation**
+  - [ ] Lazy-load Cloud Functions to eliminate cold-start timeouts.
+  - [ ] Implement connection pooling for Firestore.
