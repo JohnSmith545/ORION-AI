@@ -142,6 +142,9 @@ CITATION & CONTEXT RULES:
 - IF IRRELEVANT (false): COMPLETELY IGNORE THE CONTEXT. Answer using your own built-in knowledge.
 - IF ANALYZING AN IMAGE OR PDF: You MUST cross-reference your visual analysis with the CONTEXT provided to give the most accurate, grounded answer. Do not ignore the context!
 
+ANTI-REPETITION & CONVERSATION RULE (CRITICAL):
+- Always check the conversation history! If the user asks a follow-up question (e.g., "tell me more", "what else?"), you MUST provide entirely NEW, deeper, or more advanced details. NEVER repeat the exact same summary or facts you just gave in the previous message.
+
 THE SPACE PIVOT RULE:
 - If the user asks about an astronomical topic, answer directly and concisely. Do NOT overshare unnecessary facts.
 - If the user asks a completely NON-SPACE related question, answer politely, then pivot with a brief (1-2 sentences max) space fact to steer the conversation back.
@@ -156,7 +159,7 @@ ${contextBody}
 
   // Build the current turn parts — text first, then optional file attachment
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const currentTurnParts: any[] = [{ text: systemPrompt + '\n\nUSER QUESTION:\n' + query }]
+  const currentTurnParts: any[] = [{ text: query }]
 
   // Inject multiple files
   if (files && files.length > 0) {
@@ -167,27 +170,22 @@ ${contextBody}
     })
   }
 
-  // Build multi-turn contents: history is passed exactly as it occurred,
-  // and the system prompt (with CURRENT context) is prepended to the CURRENT question.
+  // Build multi-turn contents: history is passed exactly as it occurred.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const contents: { role: 'user' | 'model'; parts: any[] }[] = []
 
   if (history && history.length > 0) {
-    // Push the history exactly as it occurred
     for (let i = 0; i < history.length; i++) {
       contents.push({ role: history[i].role, parts: [{ text: history[i].text }] })
     }
-    // Append current turn with system prompt + question + optional file
-    contents.push({ role: 'user', parts: currentTurnParts })
-  } else {
-    // No history — single turn with system prompt + question + optional file
-    contents.push({ role: 'user', parts: currentTurnParts })
   }
+  contents.push({ role: 'user', parts: currentTurnParts })
 
   const resp = await ai.models.generateContent({
     model: CHAT_MODEL,
     contents,
     config: {
+      systemInstruction: systemPrompt,
       responseMimeType: 'application/json',
       responseSchema: RESPONSE_SCHEMA,
     },
