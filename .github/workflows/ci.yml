@@ -155,7 +155,7 @@ jobs:
         run: npm install -g firebase-tools
 
       - name: Build frontend for emulator mode
-        run: pnpm --filter web build
+        run: pnpm turbo build --filter=web
         env:
           VITE_USE_EMULATOR: 'true'
           VITE_FIREBASE_API_KEY: 'fake-api-key'
