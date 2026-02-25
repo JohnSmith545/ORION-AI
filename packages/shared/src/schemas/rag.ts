@@ -11,6 +11,14 @@ export const ChatQuerySchema = z.object({
       })
     )
     .optional(),
+  files: z
+    .array(
+      z.object({
+        data: z.string(), // Base64 string without the data URL prefix
+        mimeType: z.string(),
+      })
+    )
+    .optional(),
 })
 
 // Telemetry data for a celestial object, returned by Gemini structured output.

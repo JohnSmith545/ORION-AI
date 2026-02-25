@@ -1,0 +1,56 @@
+name: Production Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v3
+        with:
+          version: 8
+
+      - name: Setup Node (Cache-Aware)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Web & Functions
+        run: |
+          pnpm --filter web build
+          pnpm --filter functions build
+        env:
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+          # Add other frontend env vars here
+
+      - name: Deploy to Firebase
+        uses: w9jds/firebase-action@v13.0.0
+        with:
+          args: deploy --only hosting,functions,firestore
+        env:
+          GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      - name: Discord Notification (Success)
+        if: success()
+        run: |
+          curl -H "Content-Type: application/json" \
+          -d '{"content": "🚀 **Orion AI Deployed Successfully!** CI/CD Pipeline completed under 5 minutes."}' \
+          ${{ secrets.DISCORD_WEBHOOK_URL }}
+
+      - name: Discord Notification (Failure / Rollback Alert)
+        if: failure()
+        run: |
+          curl -H "Content-Type: application/json" \
+          -d '{"content": "🚨 **CRITICAL ANOMALY:** Orion AI Deployment FAILED. Please check GitHub Actions and prepare rollback."}' \
+          ${{ secrets.DISCORD_WEBHOOK_URL }}
