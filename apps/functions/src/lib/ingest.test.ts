@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { ingestDocument, saveToFirestore } from './ingest.js'
+import { ingestDocument, saveToFirestore, fetchContent, fetchFromGCS, chunkText } from './ingest.js'
 import * as gemini from './gemini.js'
 
 // Mock Firebase Storage (used by fetchFromGCS)
@@ -55,6 +55,149 @@ vi.mock('./gemini', () => ({
   ]),
 }))
 
+// ── fetchContent SSRF Protection ──────────────────────────────────────
+describe('fetchContent - SSRF Protection', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn())
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.clearAllMocks()
+  })
+
+  it('should reject HTTP (non-HTTPS) URLs', async () => {
+    await expect(fetchContent('http://example.com/doc.txt')).rejects.toThrow(
+      'Only HTTPS is allowed'
+    )
+  })
+
+  it('should reject 10.x.x.x private IP addresses', async () => {
+    await expect(fetchContent('https://10.0.0.1/secret')).rejects.toThrow('SSRF protection')
+  })
+
+  it('should reject 172.16-31.x.x private IP addresses', async () => {
+    await expect(fetchContent('https://172.16.0.1/secret')).rejects.toThrow('SSRF protection')
+    await expect(fetchContent('https://172.31.255.255/secret')).rejects.toThrow('SSRF protection')
+  })
+
+  it('should reject 192.168.x.x private IP addresses', async () => {
+    await expect(fetchContent('https://192.168.1.1/secret')).rejects.toThrow('SSRF protection')
+  })
+
+  it('should reject 169.254.x.x link-local addresses', async () => {
+    await expect(fetchContent('https://169.254.169.254/metadata')).rejects.toThrow(
+      'SSRF protection'
+    )
+  })
+
+  it('should reject metadata.google.internal hostname', async () => {
+    await expect(fetchContent('https://metadata.google.internal/v1')).rejects.toThrow(
+      'SSRF protection'
+    )
+  })
+
+  it('should accept a valid public HTTPS URL and return text content', async () => {
+    vi.mocked(global.fetch).mockResolvedValue({
+      ok: true,
+      text: () => Promise.resolve('Hello World'),
+    } as Response)
+
+    const content = await fetchContent('https://example.com/doc.txt')
+    expect(content).toBe('Hello World')
+    expect(global.fetch).toHaveBeenCalledWith('https://example.com/doc.txt')
+  })
+
+  it('should throw when fetch response is not ok', async () => {
+    vi.mocked(global.fetch).mockResolvedValue({
+      ok: false,
+      statusText: 'Not Found',
+    } as Response)
+
+    await expect(fetchContent('https://example.com/missing.txt')).rejects.toThrow(
+      'Failed to fetch content'
+    )
+  })
+})
+
+// ── fetchFromGCS ──────────────────────────────────────────────────────
+describe('fetchFromGCS', () => {
+  afterEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('should parse gs://bucket/path correctly and return UTF-8 text', async () => {
+    const content = await fetchFromGCS('gs://my-bucket/docs/report.txt')
+    expect(content).toBe('GCS document content for testing.')
+  })
+
+  it('should throw on invalid GCS URI format', async () => {
+    await expect(fetchFromGCS('not-a-gcs-uri')).rejects.toThrow('Invalid GCS URI')
+  })
+
+  it('should throw on empty GCS file contents', async () => {
+    const { getStorage } = await import('firebase-admin/storage')
+    vi.mocked(getStorage).mockReturnValueOnce({
+      bucket: vi.fn().mockReturnValue({
+        file: vi.fn().mockReturnValue({
+          download: vi.fn().mockResolvedValue([Buffer.from('')]),
+        }),
+      }),
+    } as never)
+
+    await expect(fetchFromGCS('gs://empty-bucket/empty.txt')).rejects.toThrow(
+      'GCS file is empty or not found'
+    )
+  })
+})
+
+// ── chunkText Edge Cases ──────────────────────────────────────────────
+describe('chunkText', () => {
+  it('should return single chunk when text is shorter than chunk size', () => {
+    expect(chunkText('hello', 100, 10)).toEqual(['hello'])
+  })
+
+  it('should return single chunk when text is exactly chunk size', () => {
+    const text = 'a'.repeat(100)
+    expect(chunkText(text, 100, 10)).toEqual([text])
+  })
+
+  it('should throw when chunk size is 0', () => {
+    expect(() => chunkText('hello', 0, 0)).toThrow('Chunk size must be greater than 0')
+  })
+
+  it('should throw when chunk size is negative', () => {
+    expect(() => chunkText('hello', -5, 0)).toThrow('Chunk size must be greater than 0')
+  })
+
+  it('should throw when overlap >= size', () => {
+    expect(() => chunkText('hello world', 5, 5)).toThrow('Overlap must be less than chunk size')
+    expect(() => chunkText('hello world', 5, 10)).toThrow('Overlap must be less than chunk size')
+  })
+
+  it('should handle overlap of 0 correctly', () => {
+    const chunks = chunkText('abcdefghij', 5, 0)
+    expect(chunks).toEqual(['abcde', 'fghij'])
+  })
+
+  it('should produce overlapping chunks with correct boundaries', () => {
+    // 10 chars, chunk size 6, overlap 2 → step = 4
+    const chunks = chunkText('abcdefghij', 6, 2)
+    expect(chunks[0]).toBe('abcdef')
+    expect(chunks[1]).toBe('efghij')
+    expect(chunks.length).toBe(2)
+  })
+
+  it('should handle single character text', () => {
+    expect(chunkText('a', 10, 5)).toEqual(['a'])
+  })
+
+  it('should handle empty string', () => {
+    expect(chunkText('', 10, 5)).toEqual([''])
+  })
+})
+
+// ── Ingestion Workflow Integration (existing) ─────────────────────────
 describe('Ingestion Workflow Integration', () => {
   beforeEach(() => {
     vi.stubGlobal('fetch', vi.fn())
