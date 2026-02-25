@@ -7,7 +7,7 @@ const mockDocs = [
     data: () => ({
       text: 'Chunk about stars',
       sourceUri: 'https://docs.ai/stars',
-      vector_distance: 0.12,
+      distance: 0.12,
     }),
   },
   {
@@ -46,7 +46,7 @@ describe('firestoreVectorStore', () => {
 
     it('should select only "text" and "sourceUri" fields', async () => {
       await firestoreVectorStore.findNearest([0.1, 0.2], 5)
-      expect(mockSelect).toHaveBeenCalledWith('text', 'sourceUri', 'vector_distance')
+      expect(mockSelect).toHaveBeenCalledWith('text', 'sourceUri')
     })
 
     it('should use COSINE distance measure with distanceResultField', async () => {
