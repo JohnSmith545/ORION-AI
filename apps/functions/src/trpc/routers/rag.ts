@@ -13,7 +13,7 @@ export const ragRouter = router({
    */
   chat: protectedProcedure.input(ChatQuerySchema).mutation(async ({ input }) => {
     try {
-      const { question } = input
+      const { question, files } = input
 
       // 1. Convert the user's question into a mathematical vector
       const vector = await getQueryEmbedding(question)
@@ -21,12 +21,12 @@ export const ragRouter = router({
       // 2. Search your database for the context chunks
       const context = await retrieveContext(vector, 3)
 
-      // 3. Send to Gemini with conversation history for multi-turn context
+      // 3. Send to Gemini with conversation history and optional file for multi-turn context
       const {
         text,
         telemetry: rawTelemetry,
         usedSources,
-      } = await generateGroundedResponse(question, context, input.history)
+      } = await generateGroundedResponse(question, context, input.history, files)
       let telemetry = rawTelemetry
 
       // 4. If Gemini flagged this as a complex object, fetch an image (NASA -> Wikipedia fallback)

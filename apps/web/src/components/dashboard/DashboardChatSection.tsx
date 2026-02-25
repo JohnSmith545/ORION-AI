@@ -146,6 +146,9 @@ export const DashboardChatSection: React.FC<DashboardChatSectionProps> = ({
   const [isListening, setIsListening] = useState(false)
   const [audioData, setAudioData] = useState<Uint8Array>(new Uint8Array(0))
   const scrollRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [attachments, setAttachments] = useState<{ file: File; base64: string }[]>([])
+  const [isAttachMenuOpen, setIsAttachMenuOpen] = useState(false)
   const recognitionRef = useRef<SpeechRecognitionEngine | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
@@ -309,36 +312,70 @@ export const DashboardChatSection: React.FC<DashboardChatSectionProps> = ({
     }
   }
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = Array.from(e.target.files || [])
+    if (!selectedFiles.length) return
+
+    const validFiles = selectedFiles.filter(f => {
+      if (f.size > 5 * 1024 * 1024) {
+        alert(`File ${f.name} is too large. Max 5MB.`)
+        return false
+      }
+      return true
+    })
+
+    validFiles.forEach(file => {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        const base64String = (reader.result as string).split(',')[1]
+        setAttachments(prev => [...prev, { file, base64: base64String }])
+      }
+      reader.readAsDataURL(file)
+    })
+    e.target.value = ''
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (isListening) {
-      stopListening()
-    }
+    if (isListening) stopListening()
     const trimmed = inputValue.trim()
-    if (!trimmed) return
+    if (!trimmed && attachments.length === 0) return
 
     const ts = formatTime()
+
+    // 1. Create a display string that includes the file names
+    const fileNames = attachments.map(a => a.file.name).join(', ')
+    const displayContent =
+      attachments.length > 0 ? `**[Attached: ${fileNames}]**\n\n${trimmed}` : trimmed
+
     const userMsg: ChatMessage = {
       id: `user-${Date.now()}`,
       role: 'user',
-      content: trimmed,
+      content: displayContent, // Shows in UI immediately
       timestamp: ts,
     }
     setMessages(prev => [...prev, userMsg])
     setInputValue('')
     setIsTyping(true)
 
-    // Build history from non-welcome messages for Gemini context
     const realMessages = messages.filter(m => m.id !== 'ai-initial')
     const history = realMessages.map(m => ({
       role: (m.role === 'assistant' ? 'model' : 'user') as 'user' | 'model',
       text: m.content,
     }))
 
+    // Save a copy of current attachments for the API call, then clear UI
+    const currentAttachments = [...attachments]
+    setAttachments([])
+
     try {
       const result = await chatMutation.mutateAsync({
-        question: trimmed,
+        question: trimmed || 'Please analyze the attached files.', // Fallback if they just send an image
         history: history.length > 0 ? history : undefined,
+        files:
+          currentAttachments.length > 0
+            ? currentAttachments.map(a => ({ data: a.base64, mimeType: a.file.type }))
+            : undefined,
       })
 
       const aiMsg: ChatMessage = {
@@ -350,14 +387,11 @@ export const DashboardChatSection: React.FC<DashboardChatSectionProps> = ({
       }
       setMessages(prev => [...prev, aiMsg])
 
-      // Pass through telemetry from Gemini's structured JSON output to the sidebar.
-      if (result.telemetry) {
-        onUpdateTarget?.(result.telemetry)
-      }
+      if (result.telemetry) onUpdateTarget?.(result.telemetry)
 
-      // Persist to Firestore in the background
+      // 2. Persist the DISPLAY content to Firestore, so history remembers the attachments!
       const messagesToSave = [
-        { role: 'user' as const, content: trimmed },
+        { role: 'user' as const, content: displayContent },
         {
           role: 'assistant' as const,
           content: result.response,
@@ -366,13 +400,11 @@ export const DashboardChatSection: React.FC<DashboardChatSectionProps> = ({
       ]
 
       if (activeSessionId) {
-        // Append to existing session
         addMessagesMutation.mutate(
           { sessionId: activeSessionId, messages: messagesToSave },
           { onSuccess: () => utils.user.getChatHistory.invalidate() }
         )
       } else {
-        // Create a new session — use the first user message as the title
         const title = trimmed.length > 60 ? trimmed.slice(0, 57) + '...' : trimmed
         createSessionMutation.mutate(
           { title, messages: messagesToSave },
@@ -499,21 +531,102 @@ export const DashboardChatSection: React.FC<DashboardChatSectionProps> = ({
 
       <div className="mt-4 relative group/input-area">
         <div className="absolute -top-10 left-0 w-full h-10 bg-gradient-to-t from-background-dark to-transparent pointer-events-none" />
+
+        {/* Multiple Attachments Preview UI */}
+        {attachments.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-2">
+            {attachments.map((att, idx) => (
+              <div
+                key={idx}
+                className="flex items-center gap-2 bg-primary/20 border border-primary/40 rounded-lg px-3 py-1.5 text-xs text-white backdrop-blur-md"
+              >
+                <span className="material-symbols-outlined text-sm text-primary">attach_file</span>
+                <span className="truncate max-w-[150px] font-mono">{att.file.name}</span>
+                <button
+                  type="button"
+                  onClick={() => setAttachments(prev => prev.filter((_, i) => i !== idx))}
+                  className="text-white/60 hover:text-red-500 ml-1"
+                >
+                  <span className="material-symbols-outlined text-sm">close</span>
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
         <div
-          className={`glass-login p-1.5 rounded-xl border transition-all duration-300 relative overflow-hidden backdrop-blur-2xl focus-within:border-primary/50 focus-within:shadow-[0_0_25px_rgba(0,242,255,0.15)] ${
+          className={`glass-login p-1.5 rounded-xl border transition-all duration-300 relative backdrop-blur-2xl focus-within:border-primary/50 focus-within:shadow-[0_0_25px_rgba(0,242,255,0.15)] ${
             isListening
               ? 'border-red-500/50 shadow-[0_0_30px_rgba(239,68,68,0.2)] bg-red-950/10'
               : 'border-white/15 bg-black/60 focus-within:bg-black/70'
           }`}
         >
           <form className="flex items-center gap-2" onSubmit={handleSubmit}>
-            <button
-              type="button"
-              className="p-3 rounded-lg text-white/50 hover:text-primary transition-colors hover:bg-white/5"
-              aria-label="Add"
-            >
-              <span className="material-symbols-outlined text-xl">add_circle</span>
-            </button>
+            {/* Hidden File Input */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              multiple
+              onChange={e => {
+                handleFileChange(e)
+                setIsAttachMenuOpen(false)
+              }}
+            />
+
+            {/* Upward Attachment Menu */}
+            <div className="relative">
+              {isAttachMenuOpen && (
+                <div className="absolute bottom-full mb-3 left-0 bg-black/90 border border-white/10 rounded-xl p-1.5 flex flex-col gap-1 backdrop-blur-xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] min-w-[160px] z-[100] animate-in slide-in-from-bottom-2 fade-in">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (fileInputRef.current) {
+                        fileInputRef.current.accept = 'image/*'
+                        fileInputRef.current.click()
+                      }
+                    }}
+                    className="flex items-center gap-3 text-xs text-white/70 hover:text-white hover:bg-white/10 p-2.5 rounded-lg text-left transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-sm text-primary">image</span>
+                    Attach Photo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (fileInputRef.current) {
+                        fileInputRef.current.accept = 'application/pdf'
+                        fileInputRef.current.click()
+                      }
+                    }}
+                    className="flex items-center gap-3 text-xs text-white/70 hover:text-white hover:bg-white/10 p-2.5 rounded-lg text-left transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-sm text-red-400">
+                      picture_as_pdf
+                    </span>
+                    Attach PDF
+                  </button>
+                </div>
+              )}
+
+              {/* Trigger Button */}
+              <button
+                type="button"
+                onClick={() => setIsAttachMenuOpen(!isAttachMenuOpen)}
+                className={`p-3 rounded-lg transition-colors ${
+                  attachments.length > 0 || isAttachMenuOpen
+                    ? 'text-primary bg-primary/10'
+                    : 'text-white/50 hover:text-primary hover:bg-white/5'
+                }`}
+                aria-label="Add Attachment"
+              >
+                <span
+                  className={`material-symbols-outlined text-xl transition-transform duration-300 ${isAttachMenuOpen ? 'rotate-45' : ''}`}
+                >
+                  add_circle
+                </span>
+              </button>
+            </div>
             <input
               type="text"
               value={inputValue}
