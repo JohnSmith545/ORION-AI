@@ -4,9 +4,12 @@ import type { IVectorStore, VectorSearchResult } from '../ports/vector-store.js'
 /**
  * Firestore implementation of IVectorStore.
  *
- * Uses Firestore's native `findNearest` (kNN) on the `chunks` collection
- * group with COSINE distance measure. Swap this for a VertexVectorStore
- * adapter when moving to production-grade Vertex AI Vector Search.
+ * Uses Firestore's native `findNearest` (kNN) on the `documentChunks` collection
+ * group with COSINE distance measure. The `distanceResultField` option returns
+ * the cosine distance for each result, enabling deduplication checks.
+ *
+ * COSINE distance: 0 = identical, 2 = opposite.
+ * A similarity score of 1 - distance gives: 1.0 = identical, 0.0 = orthogonal.
  */
 export const firestoreVectorStore: IVectorStore = {
   async findNearest(vector: number[], limit: number): Promise<VectorSearchResult[]> {

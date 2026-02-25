@@ -1,7 +1,15 @@
 import { TRPCError } from '@trpc/server'
-import { getFirestore, FieldValue, Timestamp, WriteBatch } from 'firebase-admin/firestore'
+import { getFirestore, FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { getStorage } from 'firebase-admin/storage'
 import { embedTexts } from './gemini.js'
+import { firestoreVectorStore } from './firestore-vector-store.js'
+
+/**
+ * Cosine similarity threshold for deduplication.
+ * COSINE distance: 0 = identical, 2 = opposite.
+ * Similarity = 1 - distance. We skip if similarity > 0.95 (distance < 0.05).
+ */
+const DEDUP_DISTANCE_THRESHOLD = 0.05
 
 /**
  * Fetches raw text content from an HTTP/HTTPS URL.
@@ -91,22 +99,81 @@ export function chunkText(text: string, size: number, overlap: number): string[]
 
 /**
  * Saves document metadata and its embedded chunks to Firestore.
+ *
+ * When `deduplicate` is true (recommended for admin/seed scripts), each chunk
+ * is checked against existing vectors. If a near-duplicate is found (cosine
+ * similarity > 0.95), the chunk is skipped to prevent redundant data.
+ *
+ * Checks are performed sequentially to avoid hitting Firestore rate limits
+ * on the free tier.
+ *
+ * If ALL chunks are skipped, the parent document metadata is NOT created
+ * to save on write operations.
  */
 export async function saveToFirestore(
   docId: string,
   title: string,
   sourceUri: string,
   chunks: string[],
-  embeddings: number[][]
+  embeddings: number[][],
+  deduplicate = false
 ): Promise<void> {
   const db = getFirestore()
   const docRef = db.collection('documentChunks').doc(docId)
+
+  // ── Deduplication pass ──────────────────────────────────────────────
+  // Filter out chunks that already have a near-duplicate in the store.
+  // Processed sequentially to stay within free-tier rate limits.
+  let filteredChunks: string[] = chunks
+  let filteredEmbeddings: number[][] = embeddings
+
+  if (deduplicate) {
+    const keepIndices: number[] = []
+
+    for (let i = 0; i < chunks.length; i++) {
+      try {
+        const nearest = await firestoreVectorStore.findNearest(embeddings[i], 1)
+
+        if (
+          nearest.length > 0 &&
+          nearest[0].distance !== undefined &&
+          nearest[0].distance < DEDUP_DISTANCE_THRESHOLD
+        ) {
+          console.log(
+            `   🔁 Skipping redundant chunk ${i + 1}/${chunks.length} from [${sourceUri}] (distance: ${nearest[0].distance.toFixed(4)})`
+          )
+          continue
+        }
+      } catch {
+        // If findNearest fails (e.g., no index yet), skip dedup for this chunk
+        // and allow it through. This prevents errors on first-ever ingestion.
+      }
+
+      keepIndices.push(i)
+    }
+
+    filteredChunks = keepIndices.map(i => chunks[i])
+    filteredEmbeddings = keepIndices.map(i => embeddings[i])
+
+    const skipped = chunks.length - filteredChunks.length
+    if (skipped > 0) {
+      console.log(
+        `   📊 Dedup result: ${skipped} redundant chunks skipped, ${filteredChunks.length} unique chunks kept.`
+      )
+    }
+  }
+
+  // ── Early exit: if all chunks were redundant, don't create the doc ──
+  if (filteredChunks.length === 0) {
+    console.log(`   ⏭️  All chunks for "${title}" are redundant — skipping document creation.`)
+    return
+  }
 
   // 1. Save main document metadata
   await docRef.set({
     title,
     sourceUri,
-    chunkCount: chunks.length,
+    chunkCount: filteredChunks.length,
     createdAt: Timestamp.now(),
   })
 
@@ -116,26 +183,23 @@ export async function saveToFirestore(
   //    sourceUri is denormalized onto each chunk so retrieval never needs
   //    a second Firestore read to look up the parent document.
   const BATCH_SIZE = 450
-  const batches: WriteBatch[] = []
 
-  for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
+  for (let i = 0; i < filteredChunks.length; i += BATCH_SIZE) {
     const batch = db.batch()
-    const slice = chunks.slice(i, i + BATCH_SIZE)
+    const slice = filteredChunks.slice(i, i + BATCH_SIZE)
 
     slice.forEach((text, sliceIndex) => {
-      const chunkRef = docRef.collection('chunks').doc()
+      const chunkRef = docRef.collection('documentChunks').doc()
       batch.set(chunkRef, {
         text,
         sourceUri,
-        embedding: FieldValue.vector(embeddings[i + sliceIndex]),
+        embedding: FieldValue.vector(filteredEmbeddings[i + sliceIndex]),
         index: i + sliceIndex,
       })
     })
 
-    batches.push(batch)
+    await batch.commit()
   }
-
-  await Promise.all(batches.map(b => b.commit()))
 }
 
 /**
