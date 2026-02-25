@@ -1,7 +1,7 @@
 import { initializeApp } from 'firebase/app'
 import { getAuth } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
-import { getAnalytics, isSupported } from 'firebase/analytics'
+import { getAnalytics, isSupported, type Analytics } from 'firebase/analytics'
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -17,5 +17,11 @@ export const app = initializeApp(firebaseConfig)
 export const auth = getAuth(app)
 export const db = getFirestore(app)
 
-// Initialize Analytics conditionally (it only runs in the browser, not during SSR/testing)
-export const analytics = await isSupported().then(yes => (yes ? getAnalytics(app) : null))
+// Initialize Analytics lazily (avoids top-level await which breaks Vite HMR)
+let _analytics: Analytics | null = null
+export async function getAppAnalytics(): Promise<Analytics | null> {
+  if (_analytics) return _analytics
+  const supported = await isSupported()
+  if (supported) _analytics = getAnalytics(app)
+  return _analytics
+}
