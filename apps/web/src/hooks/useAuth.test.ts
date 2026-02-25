@@ -26,13 +26,11 @@ vi.mock('firebase/auth', () => ({
 
 vi.mock('firebase/firestore', () => ({
   doc: vi.fn(),
-  onSnapshot: vi.fn(
-    (_docRef: unknown, cb: (snap: unknown) => void, errCb: () => void) => {
-      snapshotCallback = cb
-      snapshotErrorCallback = errCb
-      return mockUnsubscribeSnapshot
-    }
-  ),
+  onSnapshot: vi.fn((_docRef: unknown, cb: (snap: unknown) => void, errCb: () => void) => {
+    snapshotCallback = cb
+    snapshotErrorCallback = errCb
+    return mockUnsubscribeSnapshot
+  }),
 }))
 
 describe('useAuth', () => {
