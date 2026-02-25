@@ -32,7 +32,7 @@
   - [x] 🔴 Write Test: Mock `text-embedding-004` response for multiple chunks.
   - [x] 🟢 Implement: `src/lib/gemini.ts` -> `embedTexts(chunks[])`.
 - [x] **Firestore Storage**
-  - [x] 🔴 Write Test: Verify batch write to `docs` and `docs/{id}/chunks` sub-collections.
+  - [x] 🔴 Write Test: Verify batch write to `documentChunks` and `documentChunks/{id}/chunks` sub-collections.
   - [x] 🟢 Implement: `src/lib/ingest.ts` -> `saveToFirestore(doc, chunks)`.
 - [x] **Redundancy Prevention**
   - [x] Implement `findNearest` distance-score return in `IVectorStore` and `FirestoreVectorStore`.
@@ -145,11 +145,11 @@
 
 **Goal:** Production readiness and quality assurance.
 
-- [ ] **Automated Testing**
-  - [x] Unit tests for adapters — `gemini.test.ts`, `ingest.test.ts`, `rag.test.ts`, `rag.test.ts` (router), `user.test.ts` (router), `rag.test.ts` (schema), `user.test.ts` (schema). _(Coverage may not be 100%.)_
-  - [ ] Playwright E2E tests (Ingest -> Chat -> Verify Answer).
-- [ ] **Observability**
-  - [ ] Add structured logging for retrieval similarity scores and LLM latency.
+- [x] **Automated Testing**
+  - [x] Task: Unit tests for adapters — `gemini.test.ts`, `ingest.test.ts`, `rag.test.ts`, `rag.test.ts` (router), `user.test.ts` (router), `rag.test.ts` (schema), `user.test.ts` (schema). _(Coverage may not be 100%.)_
+  - [x] Task: Playwright E2E tests — auth flows (`auth.spec.ts`) and dashboard interactions (`dashboard.spec.ts`) with Firebase emulator fixtures.
+- [x] **Observability**
+  - [x] Task: Add structured logging for retrieval similarity scores and LLM latency.
 - [ ] **Deployment**
   - [x] Deploy to production via GitHub Actions (`ci.yml`, `deploy-dev.yml`, `deploy-stage.yml`, `deploy-main.yml`, `release.yml`).
   - [ ] Final A11y and performance audit.

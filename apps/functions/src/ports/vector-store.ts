@@ -6,9 +6,12 @@
  * concrete implementation — making it trivial to swap Firestore for
  * Vertex AI Vector Search (or a test double) without touching core logic.
  */
+export interface VectorSearchResult {
+  text: string
+  sourceUri: string
+  distance?: number
+}
+
 export interface IVectorStore {
-  findNearest(
-    vector: number[],
-    limit: number
-  ): Promise<{ text: string; sourceUri: string; distance?: number }[]>
+  findNearest(vector: number[], limit: number): Promise<VectorSearchResult[]>
 }

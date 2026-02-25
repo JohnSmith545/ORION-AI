@@ -1,5 +1,5 @@
-import { getFirestore, FieldValue, type QueryDocumentSnapshot } from 'firebase-admin/firestore'
-import type { IVectorStore } from '../ports/vector-store.js'
+import { getFirestore, FieldValue } from 'firebase-admin/firestore'
+import type { IVectorStore, VectorSearchResult } from '../ports/vector-store.js'
 
 /**
  * Firestore implementation of IVectorStore.
@@ -12,10 +12,7 @@ import type { IVectorStore } from '../ports/vector-store.js'
  * A similarity score of 1 - distance gives: 1.0 = identical, 0.0 = orthogonal.
  */
 export const firestoreVectorStore: IVectorStore = {
-  async findNearest(
-    vector: number[],
-    limit: number
-  ): Promise<{ text: string; sourceUri: string; distance?: number }[]> {
+  async findNearest(vector: number[], limit: number): Promise<VectorSearchResult[]> {
     const db = getFirestore()
 
     // select() limits the fields returned by Firestore to only what we need.
@@ -23,22 +20,23 @@ export const firestoreVectorStore: IVectorStore = {
     // downloaded and deserialized on every chat query then silently discarded.
     const query = db
       .collectionGroup('documentChunks')
-      .select('text', 'sourceUri', 'vector_distance')
-      .findNearest('embedding', FieldValue.vector(vector), {
+      .select('text', 'sourceUri')
+      .findNearest({
+        vectorField: 'embedding',
+        queryVector: FieldValue.vector(vector),
         limit,
         distanceMeasure: 'COSINE',
-        // @ts-expect-error: distanceResultField is supported in 13.x but missing in types
-        distanceResultField: 'vector_distance',
+        distanceResultField: 'distance',
       })
 
     const snapshot = await query.get()
 
-    return snapshot.docs.map((doc: QueryDocumentSnapshot) => {
-      const data = doc.data() as { text: string; sourceUri: string; vector_distance?: number }
+    return snapshot.docs.map(doc => {
+      const data = doc.data() as { text: string; sourceUri: string; distance?: number }
       return {
         text: data.text,
         sourceUri: data.sourceUri,
-        distance: data.vector_distance,
+        distance: data.distance,
       }
     })
   },

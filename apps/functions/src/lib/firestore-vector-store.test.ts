@@ -14,7 +14,7 @@ const mockDocs = [
     data: () => ({
       text: 'Chunk about planets',
       sourceUri: 'https://docs.ai/planets',
-      vector_distance: 0.34,
+      distance: 0.34,
     }),
   },
 ]
@@ -49,18 +49,20 @@ describe('firestoreVectorStore', () => {
       expect(mockSelect).toHaveBeenCalledWith('text', 'sourceUri', 'vector_distance')
     })
 
-    it('should use COSINE distance measure with the provided vector and limit', async () => {
+    it('should use COSINE distance measure with distanceResultField', async () => {
       const vector = [0.1, 0.2, 0.3]
       await firestoreVectorStore.findNearest(vector, 3)
 
-      expect(mockFindNearest).toHaveBeenCalledWith('embedding', vector, {
+      expect(mockFindNearest).toHaveBeenCalledWith({
+        vectorField: 'embedding',
+        queryVector: vector,
         limit: 3,
         distanceMeasure: 'COSINE',
-        distanceResultField: 'vector_distance',
+        distanceResultField: 'distance',
       })
     })
 
-    it('should return mapped results with text and sourceUri', async () => {
+    it('should return mapped results with text, sourceUri, and distance', async () => {
       const results = await firestoreVectorStore.findNearest([0.1], 5)
 
       expect(results).toEqual([
@@ -79,11 +81,7 @@ describe('firestoreVectorStore', () => {
     it('should pass through the exact limit parameter', async () => {
       await firestoreVectorStore.findNearest([0.5, 0.5], 10)
 
-      expect(mockFindNearest).toHaveBeenCalledWith(
-        'embedding',
-        [0.5, 0.5],
-        expect.objectContaining({ limit: 10 })
-      )
+      expect(mockFindNearest).toHaveBeenCalledWith(expect.objectContaining({ limit: 10 }))
     })
   })
 })
