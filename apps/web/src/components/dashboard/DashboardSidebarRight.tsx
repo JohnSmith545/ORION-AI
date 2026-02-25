@@ -204,6 +204,36 @@ export const DashboardSidebarRight: React.FC<DashboardSidebarRightProps> = ({ ta
                 className={`w-1.5 h-1.5 rounded-full ${hasTarget ? 'bg-green-500 shadow-[0_0_8px_#22c55e] animate-pulse' : 'bg-yellow-500/50 shadow-[0_0_5px_#eab308] animate-pulse'}`}
               ></span>
             </button>
+
+            {/* Google Scholar / Related Studies Button */}
+            <button
+              onClick={() => {
+                if (hasTarget) {
+                  window.open(
+                    `https://scholar.google.com/scholar?q=${encodeURIComponent(targetData.name + ' astronomy space')}`,
+                    '_blank'
+                  )
+                }
+              }}
+              disabled={!hasTarget}
+              className={`w-full flex items-center justify-between text-[10px] font-light p-2 rounded bg-white/5 border border-white/5 transition-all group ${
+                hasTarget
+                  ? 'hover:bg-blue-500/10 hover:border-blue-500/30 cursor-pointer'
+                  : 'cursor-not-allowed opacity-50'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-xs text-white/40 group-hover:text-blue-400">
+                  science
+                </span>
+                <span className="uppercase tracking-widest text-white/60 group-hover:text-white">
+                  Related Studies
+                </span>
+              </div>
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${hasTarget ? 'bg-green-500 shadow-[0_0_8px_#22c55e] animate-pulse' : 'bg-yellow-500/50 shadow-[0_0_5px_#eab308] animate-pulse'}`}
+              ></span>
+            </button>
           </div>
         </div>
       </div>

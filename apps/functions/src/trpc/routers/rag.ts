@@ -48,11 +48,11 @@ export const ragRouter = router({
           // NASA failed, proceed to fallback
         }
 
-        // Attempt 2: Wikipedia API Fallback
+        // Attempt 2: Wikipedia API Fallback (Upgraded to Search Generator)
         if (!imageUrl) {
           try {
             const wikiRes = await fetch(
-              `https://en.wikipedia.org/w/api.php?action=query&prop=pageimages&format=json&piprop=original&titles=${encodeURIComponent(telemetry.imageKeyword)}`
+              `https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(telemetry.imageKeyword)}&gsrlimit=1&prop=pageimages&piprop=original&format=json`
             )
             if (wikiRes.ok) {
               const wikiJson = await wikiRes.json()
@@ -60,7 +60,7 @@ export const ragRouter = router({
               if (pages) {
                 // Wikipedia returns dynamic keys for page IDs, so we extract the first one
                 const pageId = Object.keys(pages)[0]
-                if (pageId !== '-1') {
+                if (pageId && pageId !== '-1') {
                   imageUrl = pages[pageId]?.original?.source
                 }
               }
