@@ -1,6 +1,6 @@
 import { embedTexts } from './gemini.js'
 import { firestoreVectorStore } from './firestore-vector-store.js'
-import type { IVectorStore } from '../ports/vector-store.js'
+import type { IVectorStore, VectorSearchResult } from '../ports/vector-store.js'
 
 /**
  * Encapsulates the logic for converting a user query into a semantic vector.
@@ -20,6 +20,6 @@ export async function retrieveContext(
   vector: number[],
   limit: number = 5,
   store: IVectorStore = firestoreVectorStore
-): Promise<{ text: string; sourceUri: string }[]> {
+): Promise<VectorSearchResult[]> {
   return store.findNearest(vector, limit)
 }

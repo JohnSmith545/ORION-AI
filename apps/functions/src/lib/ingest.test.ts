@@ -223,7 +223,7 @@ describe('Ingestion Workflow Integration', () => {
 
     const { getFirestore } = await import('firebase-admin/firestore')
     const db = getFirestore()
-    expect(db.collection).toHaveBeenCalledWith('docs')
+    expect(db.collection).toHaveBeenCalledWith('documentChunks')
     expect(mockBatchFn).toHaveBeenCalled()
   })
 

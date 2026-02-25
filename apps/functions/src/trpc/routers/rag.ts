@@ -3,6 +3,7 @@ import { ChatQuerySchema, IngestDocSchema } from '@repo/shared'
 import { getQueryEmbedding, retrieveContext } from '../../lib/rag.js'
 import { generateGroundedResponse } from '../../lib/gemini.js'
 import { ingestDocument } from '../../lib/ingest.js'
+import { logger } from 'firebase-functions/v2'
 
 export const ragRouter = router({
   /**
@@ -12,21 +13,28 @@ export const ragRouter = router({
    * 3. Send to Gemini to generate a grounded response
    */
   chat: protectedProcedure.input(ChatQuerySchema).mutation(async ({ input }) => {
+    const t0 = performance.now()
     try {
       const { question, files } = input
 
       // 1. Convert the user's question into a mathematical vector
+      const tEmbed = performance.now()
       const vector = await getQueryEmbedding(question)
+      const embeddingMs = Math.round(performance.now() - tEmbed)
 
       // 2. Search your database for the context chunks
+      const tRetrieve = performance.now()
       const context = await retrieveContext(vector, 3)
+      const retrievalMs = Math.round(performance.now() - tRetrieve)
 
       // 3. Send to Gemini with conversation history and optional file for multi-turn context
+      const tGenerate = performance.now()
       const {
         text,
         telemetry: rawTelemetry,
         usedSources,
       } = await generateGroundedResponse(question, context, input.history, files)
+      const generationMs = Math.round(performance.now() - tGenerate)
       let telemetry = rawTelemetry
 
       // 4. If Gemini flagged this as a complex object, fetch an image (NASA -> Wikipedia fallback)
@@ -80,12 +88,26 @@ export const ragRouter = router({
         .filter(n => n >= 1 && n <= context.length)
         .map(n => context[n - 1].sourceUri)
 
+      const totalMs = Math.round(performance.now() - t0)
+
+      logger.info('rag.chat', {
+        embeddingMs,
+        retrievalMs,
+        generationMs,
+        totalMs,
+        chunksRetrieved: context.length,
+        distances: context.map(c => c.distance).filter(d => d !== undefined),
+        citationCount: citedUris.length,
+      })
+
       return {
         response: text,
         citations: citedUris.length > 0 ? Array.from(new Set(citedUris)) : undefined,
         telemetry,
       }
     } catch (error) {
+      const totalMs = Math.round(performance.now() - t0)
+      logger.error('rag.chat failed', { totalMs, error: String(error) })
       throw new Error(error instanceof Error ? error.message : 'Failed to generate AI response')
     }
   }),

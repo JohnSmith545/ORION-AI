@@ -2,14 +2,27 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import { appRouter } from '../router'
 import { createCallerFactory } from '../trpc'
 
+// Mock firebase-functions/v2 logger used by the chat procedure
+vi.mock('firebase-functions/v2', () => ({
+  logger: { info: vi.fn(), error: vi.fn() },
+}))
+
 // Mock the entire lib layer so the tRPC procedure is tested in isolation.
 // This verifies orchestration (correct order of calls, correct return shape)
 // without touching Vertex AI or Firestore.
 vi.mock('../../lib/rag', () => ({
   getQueryEmbedding: vi.fn().mockResolvedValue([0.1, 0.2, 0.3]),
   retrieveContext: vi.fn().mockResolvedValue([
-    { text: 'Relevant chunk about ORION AI.', sourceUri: 'https://docs.orion.ai/overview' },
-    { text: 'Vertex AI powers the embeddings.', sourceUri: 'https://docs.orion.ai/architecture' },
+    {
+      text: 'Relevant chunk about ORION AI.',
+      sourceUri: 'https://docs.orion.ai/overview',
+      distance: 0.15,
+    },
+    {
+      text: 'Vertex AI powers the embeddings.',
+      sourceUri: 'https://docs.orion.ai/architecture',
+      distance: 0.28,
+    },
   ]),
 }))
 
