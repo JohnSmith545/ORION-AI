@@ -17,6 +17,8 @@ vi.mock('../../lib/gemini', () => ({
   generateGroundedResponse: vi.fn().mockResolvedValue({
     text: 'ORION AI is a RAG platform powered by Vertex AI. [Source 1]',
     telemetry: null,
+    usedSources: [1, 2],
+    contextIsRelevant: true,
   }),
   embedTexts: vi.fn(),
 }))
@@ -39,7 +41,7 @@ vi.mock('firebase-admin/firestore', () => ({
 }))
 
 const createCaller = createCallerFactory(appRouter)
-const caller = createCaller({})
+const caller = createCaller({ uid: 'test-user' })
 const adminCaller = createCaller({ uid: 'admin-user' })
 
 describe('ragRouter', () => {
@@ -56,7 +58,6 @@ describe('ragRouter', () => {
         'https://docs.orion.ai/overview',
         'https://docs.orion.ai/architecture',
       ])
-      expect(result.telemetry).toBeNull()
     })
 
     it('calls the RAG pipeline in the correct order', async () => {

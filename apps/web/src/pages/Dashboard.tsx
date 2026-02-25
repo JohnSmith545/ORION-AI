@@ -26,7 +26,9 @@ export const Dashboard: React.FC = () => {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
   const [showWelcome, setShowWelcome] = useState(false)
   const [activeTarget, setActiveTarget] = useState<CelestialTarget | null>(null)
-  const [isOffline, setIsOffline] = useState(!navigator.onLine)
+
+  // Assume online by default to prevent flashing
+  const [isOffline, setIsOffline] = useState(false)
 
   const handleNewChat = useCallback(() => {
     setActiveSessionId(null)
@@ -45,13 +47,28 @@ export const Dashboard: React.FC = () => {
     }
   }, [user, loading, navigate])
 
-  // Network status detection
+  // Brave-proof network status detection
   useEffect(() => {
+    const verifyConnection = async () => {
+      try {
+        // Try to fetch a tiny local asset to prove we actually have a connection
+        await fetch('/vite.svg', { method: 'HEAD', cache: 'no-store' })
+        setIsOffline(false) // Fetch succeeded, we are online!
+      } catch (error) {
+        setIsOffline(true) // Fetch failed, we are actually offline.
+      }
+    }
+
     const handleOnline = () => setIsOffline(false)
-    const handleOffline = () => setIsOffline(true)
+    const handleOffline = () => verifyConnection()
 
     window.addEventListener('online', handleOnline)
     window.addEventListener('offline', handleOffline)
+
+    // Initial check (only verify if the browser claims we are offline)
+    if (!navigator.onLine) {
+      verifyConnection()
+    }
 
     return () => {
       window.removeEventListener('online', handleOnline)
@@ -123,3 +140,5 @@ export const Dashboard: React.FC = () => {
     </DashboardBackground>
   )
 }
+
+export default Dashboard

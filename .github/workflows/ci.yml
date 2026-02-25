@@ -121,3 +121,59 @@ jobs:
       # ======================================================================
       - name: Check dependency consistency
         run: pnpm sync:lint
+
+  # ========================================================================
+  # E2E Tests (Playwright + Firebase Emulators)
+  # ========================================================================
+  e2e:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    needs: ci
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: Build frontend for emulator mode
+        run: pnpm --filter web build
+        env:
+          VITE_USE_EMULATOR: 'true'
+          VITE_FIREBASE_API_KEY: 'fake-api-key'
+          VITE_FIREBASE_AUTH_DOMAIN: 'localhost'
+          VITE_FIREBASE_PROJECT_ID: 'orion-ai-2790b'
+
+      - name: Run E2E tests
+        run: |
+          firebase emulators:exec --only auth,firestore \
+            "pnpm test:e2e" \
+            --project orion-ai-2790b
+        env:
+          VITE_USE_EMULATOR: 'true'
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: e2e/test-results/
+          retention-days: 7

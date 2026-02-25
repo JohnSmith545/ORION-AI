@@ -1,0 +1,76 @@
+import { describe, it, expect, vi, afterEach } from 'vitest'
+import { firestoreVectorStore } from './firestore-vector-store.js'
+
+// Mock Firestore with chained query builder
+const mockDocs = [
+  { data: () => ({ text: 'Chunk about stars', sourceUri: 'https://docs.ai/stars' }) },
+  { data: () => ({ text: 'Chunk about planets', sourceUri: 'https://docs.ai/planets' }) },
+]
+
+const mockGet = vi.fn().mockResolvedValue({ docs: mockDocs })
+const mockFindNearest = vi.fn().mockReturnValue({ get: mockGet })
+const mockSelect = vi.fn().mockReturnValue({ findNearest: mockFindNearest })
+const mockCollectionGroup = vi.fn().mockReturnValue({ select: mockSelect })
+
+vi.mock('firebase-admin/firestore', () => ({
+  getFirestore: vi.fn(() => ({
+    collectionGroup: (...args: unknown[]) => mockCollectionGroup(...args),
+  })),
+  FieldValue: {
+    vector: vi.fn((v: number[]) => v),
+  },
+}))
+
+describe('firestoreVectorStore', () => {
+  afterEach(() => {
+    vi.clearAllMocks()
+  })
+
+  describe('findNearest', () => {
+    it('should query collectionGroup "documentChunks"', async () => {
+      await firestoreVectorStore.findNearest([0.1, 0.2], 5)
+      expect(mockCollectionGroup).toHaveBeenCalledWith('documentChunks')
+    })
+
+    it('should select only "text" and "sourceUri" fields', async () => {
+      await firestoreVectorStore.findNearest([0.1, 0.2], 5)
+      expect(mockSelect).toHaveBeenCalledWith('text', 'sourceUri')
+    })
+
+    it('should use COSINE distance measure with the provided vector and limit', async () => {
+      const vector = [0.1, 0.2, 0.3]
+      await firestoreVectorStore.findNearest(vector, 3)
+
+      expect(mockFindNearest).toHaveBeenCalledWith('embedding', vector, {
+        limit: 3,
+        distanceMeasure: 'COSINE',
+      })
+    })
+
+    it('should return mapped results with text and sourceUri', async () => {
+      const results = await firestoreVectorStore.findNearest([0.1], 5)
+
+      expect(results).toEqual([
+        { text: 'Chunk about stars', sourceUri: 'https://docs.ai/stars' },
+        { text: 'Chunk about planets', sourceUri: 'https://docs.ai/planets' },
+      ])
+    })
+
+    it('should return empty array when snapshot has no docs', async () => {
+      mockGet.mockResolvedValueOnce({ docs: [] })
+
+      const results = await firestoreVectorStore.findNearest([0.1], 5)
+      expect(results).toEqual([])
+    })
+
+    it('should pass through the exact limit parameter', async () => {
+      await firestoreVectorStore.findNearest([0.5, 0.5], 10)
+
+      expect(mockFindNearest).toHaveBeenCalledWith(
+        'embedding',
+        [0.5, 0.5],
+        expect.objectContaining({ limit: 10 })
+      )
+    })
+  })
+})

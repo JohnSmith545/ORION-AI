@@ -71,5 +71,106 @@ describe('Gemini Adapter', () => {
       expect(result.text).toBe('Grounded AI response with citations.')
       expect(result.telemetry).toBeNull()
     })
+
+    it('should throw Error when Gemini returns null/empty text', async () => {
+      mockGenerateContent.mockResolvedValueOnce({ text: null })
+
+      const context = [{ text: 'context', sourceUri: 'https://example.com' }]
+      await expect(generateGroundedResponse('query', context)).rejects.toThrow(
+        'Gemini failed to generate a response'
+      )
+    })
+
+    it('should return plain text fallback when JSON parsing fails', async () => {
+      mockGenerateContent.mockResolvedValueOnce({ text: 'This is not valid JSON' })
+
+      const context = [{ text: 'context', sourceUri: 'https://example.com' }]
+      const result = await generateGroundedResponse('query', context)
+
+      expect(result.text).toBe('This is not valid JSON')
+      expect(result.telemetry).toBeNull()
+      expect(result.usedSources).toEqual([])
+      expect(result.contextIsRelevant).toBe(false)
+    })
+
+    it('should hard-override usedSources to [] when contextIsRelevant is false', async () => {
+      mockGenerateContent.mockResolvedValueOnce({
+        text: JSON.stringify({
+          text: 'Some answer',
+          contextIsRelevant: false,
+          usedSources: [1, 2, 3],
+          telemetry: null,
+        }),
+      })
+
+      const context = [{ text: 'unrelated context', sourceUri: 'https://example.com' }]
+      const result = await generateGroundedResponse('query', context)
+
+      expect(result.usedSources).toEqual([])
+      expect(result.contextIsRelevant).toBe(false)
+    })
+
+    it('should preserve usedSources when contextIsRelevant is true', async () => {
+      mockGenerateContent.mockResolvedValueOnce({
+        text: JSON.stringify({
+          text: 'Great answer from sources',
+          contextIsRelevant: true,
+          usedSources: [1, 3],
+          telemetry: null,
+        }),
+      })
+
+      const context = [{ text: 'relevant', sourceUri: 'https://example.com' }]
+      const result = await generateGroundedResponse('query', context)
+
+      expect(result.usedSources).toEqual([1, 3])
+      expect(result.contextIsRelevant).toBe(true)
+    })
+
+    it('should handle missing optional fields gracefully', async () => {
+      mockGenerateContent.mockResolvedValueOnce({
+        text: JSON.stringify({
+          text: 'Response without optional fields',
+          contextIsRelevant: true,
+        }),
+      })
+
+      const context = [{ text: 'context', sourceUri: 'https://example.com' }]
+      const result = await generateGroundedResponse('query', context)
+
+      expect(result.text).toBe('Response without optional fields')
+      expect(result.telemetry).toBeNull()
+      expect(result.usedSources).toEqual([])
+    })
+
+    it('should pass conversation history to contents array', async () => {
+      const context = [{ text: 'context', sourceUri: 'https://example.com' }]
+      const history = [
+        { role: 'user' as const, text: 'First question' },
+        { role: 'model' as const, text: 'First answer' },
+      ]
+
+      await generateGroundedResponse('Follow up question', context, history)
+
+      expect(mockGenerateContent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          contents: expect.arrayContaining([
+            { role: 'user', parts: [{ text: 'First question' }] },
+            { role: 'model', parts: [{ text: 'First answer' }] },
+          ]),
+        })
+      )
+    })
+  })
+
+  describe('embedTexts - Error Cases', () => {
+    it('should throw when embedding count does not match text count', async () => {
+      // Return only 1 embedding for 2 texts
+      mockEmbedContent.mockResolvedValueOnce({
+        embeddings: [{ values: [0.1, 0.2] }],
+      })
+
+      await expect(embedTexts(['text1', 'text2'])).rejects.toThrow('Embedding count mismatch')
+    })
   })
 })

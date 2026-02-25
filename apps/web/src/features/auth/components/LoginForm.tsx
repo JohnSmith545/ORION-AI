@@ -31,9 +31,20 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onProgressChange, onRecove
     setError(null)
 
     try {
-      await setPersistence(auth, keepSession ? browserLocalPersistence : browserSessionPersistence)
+      console.log('Login Start')
+      if (import.meta.env.VITE_USE_EMULATOR !== 'true') {
+        await setPersistence(
+          auth,
+          keepSession ? browserLocalPersistence : browserSessionPersistence
+        )
+        console.log('Persistence set')
+      } else {
+        console.log('Persistence skipped in emulator')
+      }
+
       const userCredential = await signInWithEmailAndPassword(auth, email, password)
       const user = userCredential.user
+      console.log('Sign in complete, user UID:', user.uid)
 
       // Update lastSeen in Firestore
       await setDoc(
@@ -67,7 +78,13 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onProgressChange, onRecove
     setLoading(true)
     setError(null)
     try {
-      await setPersistence(auth, keepSession ? browserLocalPersistence : browserSessionPersistence)
+      if (import.meta.env.VITE_USE_EMULATOR !== 'true') {
+        await setPersistence(
+          auth,
+          keepSession ? browserLocalPersistence : browserSessionPersistence
+        )
+      }
+
       const result = await signInWithPopup(auth, provider)
       const user = result.user
 
