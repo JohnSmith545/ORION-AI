@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app'
-import { getAuth } from 'firebase/auth'
-import { getFirestore } from 'firebase/firestore'
+import { getAuth, connectAuthEmulator } from 'firebase/auth'
+import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore'
 import { getAnalytics, isSupported, type Analytics } from 'firebase/analytics'
 
 const firebaseConfig = {
@@ -16,6 +16,16 @@ const firebaseConfig = {
 export const app = initializeApp(firebaseConfig)
 export const auth = getAuth(app)
 export const db = getFirestore(app)
+
+// Connect to Firebase Emulators in local/E2E dev mode
+if (import.meta.env.VITE_USE_EMULATOR === 'true') {
+  // Guard against double-connect during HMR
+  if (!(window as unknown as Record<string, boolean>).__FIREBASE_EMULATORS_CONNECTED__) {
+    connectAuthEmulator(auth, 'http://localhost:9099', { disableWarnings: true })
+    connectFirestoreEmulator(db, 'localhost', 8080)
+    ;(window as unknown as Record<string, boolean>).__FIREBASE_EMULATORS_CONNECTED__ = true
+  }
+}
 
 // Initialize Analytics lazily (avoids top-level await which breaks Vite HMR)
 let _analytics: Analytics | null = null
