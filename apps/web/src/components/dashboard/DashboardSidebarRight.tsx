@@ -140,23 +140,70 @@ export const DashboardSidebarRight: React.FC<DashboardSidebarRightProps> = ({ ta
         </div>
 
         {/* SENSOR STATUS */}
-        <div className="pt-2">
+        <div className="pt-4 flex-shrink-0">
           <h3 className="text-[10px] font-mono uppercase tracking-[0.2em] text-white/50 mb-3 text-right border-b border-white/10 pb-2">
             Active Scanners
           </h3>
           <div className="space-y-2">
-            <div className="flex items-center justify-between text-[10px] font-light text-white/80 p-2 rounded bg-white/5 border border-white/5">
-              <span className="uppercase tracking-widest text-white/60">Optical Array</span>
+            {/* Wikipedia / Optical Array Button */}
+            <button
+              onClick={() => {
+                if (hasTarget) {
+                  window.open(
+                    `https://en.wikipedia.org/wiki/${encodeURIComponent(targetData.name)}`,
+                    '_blank'
+                  )
+                }
+              }}
+              disabled={!hasTarget}
+              className={`w-full flex items-center justify-between text-[10px] font-light p-2 rounded bg-white/5 border border-white/5 transition-all group ${
+                hasTarget
+                  ? 'hover:bg-primary/10 hover:border-primary/30 cursor-pointer'
+                  : 'cursor-not-allowed opacity-50'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-xs text-white/40 group-hover:text-primary">
+                  language
+                </span>
+                <span className="uppercase tracking-widest text-white/60 group-hover:text-white">
+                  More Information
+                </span>
+              </div>
               <span
                 className={`w-1.5 h-1.5 rounded-full ${hasTarget ? 'bg-green-500 shadow-[0_0_8px_#22c55e]' : 'bg-yellow-500/50 shadow-[0_0_5px_#eab308] animate-pulse'}`}
               ></span>
-            </div>
-            <div className="flex items-center justify-between text-[10px] font-light text-white/80 p-2 rounded bg-white/5 border border-white/5">
-              <span className="uppercase tracking-widest text-white/60">Spectrometer</span>
+            </button>
+
+            {/* YouTube / Spectrometer Button */}
+            <button
+              onClick={() => {
+                if (hasTarget) {
+                  window.open(
+                    `https://www.youtube.com/results?search_query=${encodeURIComponent(targetData.name + ' astronomy')}`,
+                    '_blank'
+                  )
+                }
+              }}
+              disabled={!hasTarget}
+              className={`w-full flex items-center justify-between text-[10px] font-light p-2 rounded bg-white/5 border border-white/5 transition-all group ${
+                hasTarget
+                  ? 'hover:bg-red-500/10 hover:border-red-500/30 cursor-pointer'
+                  : 'cursor-not-allowed opacity-50'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-xs text-white/40 group-hover:text-red-500">
+                  play_circle
+                </span>
+                <span className="uppercase tracking-widest text-white/60 group-hover:text-white">
+                  Videos
+                </span>
+              </div>
               <span
                 className={`w-1.5 h-1.5 rounded-full ${hasTarget ? 'bg-green-500 shadow-[0_0_8px_#22c55e] animate-pulse' : 'bg-yellow-500/50 shadow-[0_0_5px_#eab308] animate-pulse'}`}
               ></span>
-            </div>
+            </button>
           </div>
         </div>
       </div>

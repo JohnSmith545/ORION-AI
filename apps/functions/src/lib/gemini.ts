@@ -126,7 +126,8 @@ const RESPONSE_SCHEMA = {
 export async function generateGroundedResponse(
   query: string,
   context: { text: string; sourceUri: string }[],
-  history?: { role: 'user' | 'model'; text: string }[]
+  history?: { role: 'user' | 'model'; text: string }[],
+  files?: { data: string; mimeType: string }[] // UPDATED TO ARRAY
 ): Promise<GroundedResponse> {
   const contextBody = context
     .map((c, i) => `[Source ${i + 1}: ${c.sourceUri}]\n${c.text}`)
@@ -138,38 +139,49 @@ You are ORION AI, an incredibly passionate and enthusiastic astronomy expert. Yo
 CITATION & CONTEXT RULES:
 - First, determine if the CONTEXT is relevant to the query and set "contextIsRelevant" to true or false.
 - IF RELEVANT (true): Use the information, cite it using [Source 1], and list the source numbers in "usedSources".
-- IF IRRELEVANT (false): COMPLETELY IGNORE THE CONTEXT. Answer using your own built-in knowledge. Do NOT output any source brackets in the text, and return an empty [] for "usedSources".
+- IF IRRELEVANT (false): COMPLETELY IGNORE THE CONTEXT. Answer using your own built-in knowledge.
+- IF ANALYZING AN IMAGE OR PDF: You MUST cross-reference your visual analysis with the CONTEXT provided to give the most accurate, grounded answer. Do not ignore the context!
 
 THE SPACE PIVOT RULE:
-- If the user asks about an astronomical topic, answer it and include a brief, related space fact.
-- If the user asks a completely NON-SPACE related question (e.g., cooking, programming, general greetings, etc.), answer their query politely, but then you MUST pivot and provide a VERY LONG, highly detailed, and wildly enthusiastic fun fact about astrophysics or the cosmos to drag the conversation back to space.
+- If the user asks about an astronomical topic, answer directly and concisely. Do NOT overshare unnecessary facts.
+- If the user asks a completely NON-SPACE related question, answer politely, then pivot with a brief (1-2 sentences max) space fact to steer the conversation back.
 
-TELEMETRY EXTRACTION RULE: When your response discusses ANY astronomical topic — a specific celestial object, a general space concept, a space mission, or a phenomenon — you MUST populate the "telemetry" field. For general concepts without exact coordinates, use "N/A" or "UNIVERSAL" for ra, dec, and distance. Set "telemetry" to null ONLY if the user is asking a completely non-space question.
+TELEMETRY EXTRACTION RULE: 
+- You MUST extract telemetry data specifically for the PRIMARY SUBJECT of the user's question or the uploaded image.
+- CRITICAL: Do NOT extract telemetry for the secondary "fun fact" or pivot topic. The telemetry must match what the user is actually asking about! Set to null ONLY if the user is asking a non-space question.
 
 CONTEXT:
 ${contextBody}
   `.trim()
 
+  // Build the current turn parts — text first, then optional file attachment
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const currentTurnParts: any[] = [{ text: systemPrompt + '\n\nUSER QUESTION:\n' + query }]
+
+  // Inject multiple files
+  if (files && files.length > 0) {
+    files.forEach(f => {
+      currentTurnParts.push({
+        inlineData: { data: f.data, mimeType: f.mimeType },
+      })
+    })
+  }
+
   // Build multi-turn contents: history is passed exactly as it occurred,
   // and the system prompt (with CURRENT context) is prepended to the CURRENT question.
-  const contents: { role: 'user' | 'model'; parts: { text: string }[] }[] = []
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const contents: { role: 'user' | 'model'; parts: any[] }[] = []
 
   if (history && history.length > 0) {
     // Push the history exactly as it occurred
     for (let i = 0; i < history.length; i++) {
       contents.push({ role: history[i].role, parts: [{ text: history[i].text }] })
     }
-    // Prepend the system prompt and CURRENT context to the CURRENT question
-    contents.push({
-      role: 'user',
-      parts: [{ text: systemPrompt + '\n\nUSER QUESTION:\n' + query }],
-    })
+    // Append current turn with system prompt + question + optional file
+    contents.push({ role: 'user', parts: currentTurnParts })
   } else {
-    // No history — single turn with system prompt + question
-    contents.push({
-      role: 'user',
-      parts: [{ text: systemPrompt + '\n\nUSER QUESTION:\n' + query }],
-    })
+    // No history — single turn with system prompt + question + optional file
+    contents.push({ role: 'user', parts: currentTurnParts })
   }
 
   const resp = await ai.models.generateContent({
