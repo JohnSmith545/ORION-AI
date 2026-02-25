@@ -404,9 +404,7 @@ describe('userRouter', () => {
     })
 
     it('returns empty array when no folders exist', async () => {
-      mockCollectionRef.get
-        .mockResolvedValueOnce({ docs: [] })
-        .mockResolvedValueOnce({ docs: [] })
+      mockCollectionRef.get.mockResolvedValueOnce({ docs: [] }).mockResolvedValueOnce({ docs: [] })
 
       const result = await caller.user.getArchiveFolders()
       expect(result).toEqual([])
@@ -444,9 +442,7 @@ describe('userRouter', () => {
         data: () => ({ userId: 'other-user', name: 'Not Yours' }),
       })
 
-      await expect(
-        caller.user.getArchivedSessions({ folderId: 'folder-other' })
-      ).rejects.toThrow()
+      await expect(caller.user.getArchivedSessions({ folderId: 'folder-other' })).rejects.toThrow()
     })
 
     it('returns empty array for empty folder', async () => {
