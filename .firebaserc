@@ -1,5 +1,15 @@
 {
   "projects": {
     "default": "orion-ai-2790b"
-  }
+  },
+  "targets": {
+    "orion-ai-2790b": {
+      "hosting": {
+        "production": [
+          "orion-intel"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }
