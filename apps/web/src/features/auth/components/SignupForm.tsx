@@ -265,20 +265,6 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onProgressChange, onLogi
           </span>
         </button>
       </form>
-
-      <div className="mt-5 pt-4 border-t border-white/5 flex flex-col items-center gap-3">
-        <p className="text-xs md:text-sm text-white/30 font-light uppercase tracking-widest">
-          Or register via quantum link
-        </p>
-        <div className="flex gap-4">
-          <button className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 hover:border-white/20 hover:shadow-[0_0_10px_rgba(255,255,255,0.1)] transition-all">
-            <span className="material-symbols-outlined text-lg text-white/60">hub</span>
-          </button>
-          <button className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 hover:border-white/20 hover:shadow-[0_0_10px_rgba(255,255,255,0.1)] transition-all">
-            <span className="material-symbols-outlined text-lg text-white/60">fingerprint</span>
-          </button>
-        </div>
-      </div>
     </div>
   )
 }
