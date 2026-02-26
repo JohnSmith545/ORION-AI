@@ -14,7 +14,8 @@
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "seed:packs": "npx tsx src/scripts/seed-data-packs.ts"
+    "seed:packs": "npx tsx src/scripts/seed-data-packs.ts",
+    "seed:missions": "npx tsx src/scripts/seed-space-missions.ts"
   },
   "dependencies": {
     "@google/genai": "^1.41.0",
