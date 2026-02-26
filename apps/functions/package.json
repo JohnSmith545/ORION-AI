@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@google/genai": "^1.41.0",
+    "@repo/shared": "workspace:*",
     "@trpc/server": "^11.0.0-rc.660",
     "cors": "^2.8.5",
     "express": "^4.21.2",
@@ -41,6 +42,6 @@
     "vitest": "^2.1.8"
   },
   "engines": {
-    "node": "24.13.0"
+    "node": ">=24"
   }
 }
