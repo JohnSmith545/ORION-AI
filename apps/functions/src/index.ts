@@ -34,7 +34,11 @@ export const api = onRequest({ maxInstances: 10 }, async (req, res) => {
     // Apply CORS with restricted origins
     app.use(
       cors({
-        origin: ['https://orion-ai-2790b.web.app', 'http://localhost:5173'],
+        origin: [
+          'https://orion-intel.web.app',
+          'https://orion-ai-2790b.web.app',
+          'http://localhost:5173',
+        ],
         credentials: true,
         methods: ['GET', 'POST', 'OPTIONS'],
         allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-TRPC-Source'],
