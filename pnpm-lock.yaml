@@ -51,6 +51,9 @@ importers:
       '@google/genai':
         specifier: ^1.41.0
         version: 1.41.0
+      '@repo/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@trpc/server':
         specifier: ^11.0.0-rc.660
         version: 11.8.1(typescript@5.5.4)
