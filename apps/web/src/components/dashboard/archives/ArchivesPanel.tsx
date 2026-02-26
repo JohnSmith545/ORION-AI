@@ -108,7 +108,7 @@ export const ArchivesPanel: React.FC<ArchivesPanelProps> = ({
       )}
 
       {/* Folder list */}
-      <div className="space-y-0.5 max-h-[200px] overflow-y-auto chat-scroll">
+      <div className="space-y-0.5 overflow-y-auto chat-scroll">
         {folders?.map(folder => (
           <ArchiveFolder
             key={folder.id}

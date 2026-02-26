@@ -336,7 +336,7 @@ export const DashboardSidebarLeft: React.FC<DashboardSidebarLeftProps> = ({
   return (
     <aside className="hidden lg:flex w-[260px] shrink-0 h-full glass-panel rounded-xl flex-col justify-between py-6 px-4 relative overflow-hidden shadow-panel-glow">
       <DndProvider>
-        <div className="space-y-8">
+        <div className="space-y-8 flex-1 min-h-0 overflow-y-auto chat-scroll pr-1">
           {/* Role-based primary section */}
           {role === 'admin' ? (
             <AdminIngestPanel />
