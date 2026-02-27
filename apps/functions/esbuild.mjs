@@ -28,6 +28,7 @@ await build({
     'express',
     'cors',
     'express-rate-limit',
+    'helmet',
     'zod',
   ],
   // Needed for ESM output with external packages
