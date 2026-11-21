@@ -1,135 +1,116 @@
-````markdown
 # Orion AI
 
-Orbital Retrieval and Intelligence Observation Network (Orion AI) is a production-ready RAG (Retrieval-Augmented Generation) chatbot platform designed to provide accurate, cited answers from a custom knowledge base. Built on a modern monorepo stack, it leverages **Google Vertex AI** for intelligence and **Firebase** for serverless scalability.
+Orbital Retrieval and Intelligence Observation Network (Orion AI) is a RAG (Retrieval-Augmented Generation) chatbot that gives cited answers about astronomy, astrophysics and space missions from a custom knowledge base. It runs on a TypeScript monorepo, with **Google Vertex AI** for embeddings and generation and **Firebase** for the serverless backend.
 
-## 🚀 Project Overview
+## Project overview
 
-Orion AI enables users to ingest documents and query them using natural language. The system retrieves relevant context using Vector Search and generates answers using Gemini 2.5 Flash.
+Admins ingest documents; users ask questions in natural language. The system retrieves the most relevant chunks with Vector Search and generates an answer with Gemini 2.5 Flash, citing its sources.
 
-| Component     | Tech Choice        | Role                                               |
+| Component     | Tech choice        | Role                                               |
 | :------------ | :----------------- | :------------------------------------------------- |
-| **Frontend**  | React + Vite       | The interactive chat interface                     |
-| **Backend**   | Firebase Functions | Orchestrates RAG logic and API requests            |
-| **API Layer** | tRPC               | Type-safe communication between Frontend & Backend |
-| **AI Engine** | Vertex AI          | Embeddings (Gecko) & Generation (Gemini)           |
+| **Frontend**  | React + Vite       | The chat interface                                 |
+| **Backend**   | Firebase Functions | Orchestrates the RAG logic and API requests        |
+| **API layer** | tRPC               | Type-safe calls between frontend and backend       |
+| **AI engine** | Vertex AI          | Embeddings (`text-embedding-004`) and generation (`gemini-2.5-flash`) |
 | **Vector DB** | Vector Search      | Stores and retrieves semantic embeddings           |
-| **Database**  | Firestore          | Stores raw document chunks and metadata            |
+| **Database**  | Firestore          | Stores document chunks and metadata                |
 
-## 📂 Monorepo Structure
+## Monorepo structure
 
-This project is built with **Turborepo** and **pnpm** workspaces.
+Built with **Turborepo** and **pnpm** workspaces.
 
 ```text
 ├── apps/
-│   ├── web/              # 🎨 Frontend: React, Tailwind, Shadcn UI
-│   │   ├── src/components/ # Chat interface & RAG UI components
+│   ├── web/                # Frontend: React, Tailwind, shadcn/ui
+│   │   ├── src/components/ # Chat interface and RAG UI components
 │   │   └── src/hooks/      # tRPC hooks for data fetching
 │   │
-│   └── functions/        # ⚡ Backend: Firebase Cloud Functions
-│       ├── src/trpc/     # tRPC Routers (RagRouter, UserRouter)
-│       └── src/lib/      # Vertex AI & Firestore adapters
+│   └── functions/          # Backend: Firebase Cloud Functions
+│       ├── src/trpc/       # tRPC routers (RagRouter, UserRouter)
+│       └── src/lib/        # Vertex AI and Firestore adapters
 │
 ├── packages/
-│   ├── ui/               # 🧩 Shared UI Component Library
-│   ├── shared/           # 🤝 Shared Zod Schemas (API Contracts)
-│   ├── config/           # ⚙️ Shared TS & Tooling Configs
-│   └── eslint-config/    # urp Linting Rules
+│   ├── ui/                 # Shared UI component library
+│   ├── shared/             # Shared Zod schemas (API contracts)
+│   ├── config/             # Shared TypeScript and tooling configs
+│   └── eslint-config/      # Shared lint rules
 │
-└── .github/              # 🤖 CI/CD Workflows (WIF + Deployments)
+└── .github/                # CI/CD workflows
 ```
-````
 
-## 🛠️ Quick Start
+## Quick start
 
 ### Prerequisites
 
 - **Node.js 20+**
 - **pnpm 8+** (`npm install -g pnpm`)
-- **Google Cloud Project** (with Vertex AI API enabled)
+- **A Google Cloud project** with the Vertex AI API enabled
 
-### 1. Installation
-
-Clone the repo and install dependencies:
+### 1. Install
 
 ```bash
-git clone [https://github.com/johnsmith545/orion-ai.git](https://github.com/johnsmith545/orion-ai.git)
-cd orion-ai
+git clone https://github.com/JohnSmith545/ORION-AI.git
+cd ORION-AI
 pnpm install
-
 ```
 
-### 2. Environment Setup
-
-Copy the example environment variables:
+### 2. Configure
 
 ```bash
 cp .env.example .env
-
 ```
 
-_Update `.env` with your GCP Project ID and Firebase config._
+Update `.env` with your GCP project ID and Firebase config.
 
-### 3. Start Development
+### 3. Run
 
-Run the entire stack (Frontend + Backend in watch mode):
+Run the whole stack (frontend and backend in watch mode):
 
 ```bash
 pnpm dev
-
 ```
 
-- **Web App:** [http://localhost:5173]()
-- **Backend:** [http://localhost:5001]()
+- Web app: http://localhost:5173
+- Backend (Functions emulator): http://localhost:5001
 
-## ⚡ Key Features
+## How the RAG pipeline works
 
-### 🧠 RAG Architecture
+The design keeps costs low while staying a real retrieval system:
 
-The system implements a "Cheap-but-Real" architecture to minimize costs:
+1. **Ingestion:** an admin uploads documents → they are chunked → each chunk is embedded → embeddings go to Vector Search, chunks and metadata to Firestore.
+2. **Retrieval:** the user's question is embedded → Vector Search finds the nearest chunks (KNN) → the chunks are fetched from Firestore.
+3. **Generation:** the retrieved context and the question go to Gemini → it answers with citations to the source chunks.
 
-1. **Ingestion:** Admin uploads docs Chunked Embedded Stored in Vector Search.
-2. **Retrieval:** User Query Embedded Vector Search (KNN) Fetch Chunks.
-3. **Generation:** Context + Query Gemini Answer with Citations.
+A step-by-step walkthrough is in [`docs/RAG-INGESTION-WALKTHROUGH.md`](docs/RAG-INGESTION-WALKTHROUGH.md).
 
-### 🛡️ Type-Safety
+## Type safety
 
-We use **tRPC** and **Zod** to ensure end-to-end type safety.
+**tRPC** and **Zod** give end-to-end type safety:
 
-- **Shared Schemas:** Defined in `packages/shared/src/schemas/rag.ts`.
-- **Frontend:** Gets autocompletion for backend procedures.
-- **Backend:** Automatically validates all inputs before processing.
+- **Shared schemas** live in `packages/shared/src/schemas/rag.ts`.
+- **Frontend:** autocompletion for every backend procedure.
+- **Backend:** every input is validated before processing.
 
-## 🤖 CI/CD Pipelines
+## CI/CD
 
-Orion AI uses **GitHub Actions** with **Workload Identity Federation (WIF)** for keyless, secure deployments.
+GitHub Actions run lint, type checks, tests and dependency review on every pull request. Deployments to Firebase use **Workload Identity Federation**, so no long-lived service account keys are stored in GitHub. There are separate deploy workflows for development, staging and production, each running in its own GitHub environment.
 
-| Environment     | Branch  | Trigger         | URL                  |
-| --------------- | ------- | --------------- | -------------------- |
-| **Development** | `dev`   | Push to branch  | `dev.orion-ai.com`   |
-| **Staging**     | `stage` | Push to branch  | `stage.orion-ai.com` |
-| **Production**  | `main`  | Manual Approval | `orion-ai.com`       |
+Details are in [`docs/ci-cd/`](docs/ci-cd/).
 
-_See `docs/ci-cd/` for detailed deployment guides._
+## Testing and quality
 
-## 🧪 Testing & Quality
+- **Lint:** `pnpm lint` (ESLint)
+- **Type check:** `pnpm typecheck` (TypeScript)
+- **Unit tests:** `pnpm test` (Vitest)
+- **All checks:** `pnpm precheck` (lint, type check, build and tests)
 
-- **Linting:** `pnpm lint` (ESLint)
-- **Type Checking:** `pnpm typecheck` (TypeScript)
-- **Unit Tests:** `pnpm test` (Vitest)
-- **Pre-Check:** `pnpm precheck` (Runs all the above)
+## Contributing
 
-## 🤝 Contributing
+1. Create a feature branch.
+2. Make your changes and run `pnpm precheck`.
+3. If you change a shared package, run `pnpm changeset`.
+4. Open a pull request.
 
-1. Create a feature branch from `dev`.
-2. Make changes and run `pnpm precheck`.
-3. If updating shared packages, run `pnpm changeset`.
-4. Open a PR to `dev`.
+## Authors
 
----
-
-_Built with ❤️ by the Orion AI Team_
-
-```
-
-```
+Built by [@JohnSmith545](https://github.com/JohnSmith545) and [@Yz31LL](https://github.com/Yz31LL).
